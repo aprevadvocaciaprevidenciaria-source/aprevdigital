@@ -74,6 +74,17 @@ export default function Conversas() {
     conversaSelecionadaRef.current = conversaSelecionada
   }, [conversaSelecionada])
 
+  // Rola pro final sempre que a lista de mensagens muda (abrir conversa,
+  // chegar mensagem nova por realtime, ou mandar resposta) - um único lugar
+  // em vez de setTimeout espalhado. Repete depois de 300ms pra corrigir o
+  // caso de foto/vídeo ainda estar carregando e empurrar o conteúdo pra
+  // baixo depois do primeiro scroll.
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'auto' })
+    const t = setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'auto' }), 300)
+    return () => clearTimeout(t)
+  }, [mensagens])
+
   useEffect(() => {
     async function init() {
       const { data: sessionData } = await supabase.auth.getSession()
@@ -115,7 +126,6 @@ export default function Conversas() {
             }
             return [...prev, nova]
           })
-          setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
           if (nova.direcao === 'recebida') {
             // Já está com a conversa aberta na tela - marca como lida na hora
             // em vez de deixar o badge de não lidas acender à toa.
@@ -180,8 +190,6 @@ export default function Conversas() {
       await supabase.from('conversas_whatsapp').update({ nao_lidas: 0 }).eq('id', conversa.id)
       setConversas((prev) => prev.map((c) => (c.id === conversa.id ? { ...c, nao_lidas: 0 } : c)))
     }
-
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
   }
 
   async function usarSugestao() {
@@ -230,7 +238,6 @@ export default function Conversas() {
           .sort((a, b) => new Date(b.ultima_mensagem_em || b.created_at) - new Date(a.ultima_mensagem_em || a.created_at))
       )
       setResposta('')
-      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
     } else {
       setErroEnvio(data?.error || 'Falha ao enviar a mensagem pelo WhatsApp.')
     }
