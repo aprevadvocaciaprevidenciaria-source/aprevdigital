@@ -226,30 +226,32 @@ export default function Relatorios() {
         {porResponsavel.length === 0 ? (
           <p className="text-sm text-slate-400">Nenhum colaborador cadastrado ainda, ou está tudo em dia.</p>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="table-head">
-                <th className="px-4 py-2 font-medium">Responsável</th>
-                <th className="px-4 py-2 font-medium">Tarefas atrasadas</th>
-                <th className="px-4 py-2 font-medium">Conversas aguardando resposta</th>
-              </tr>
-            </thead>
-            <tbody>
-              {porResponsavel.map((r) => (
-                <tr key={r.nome} className="border-b border-slate-50">
-                  <td className="px-4 py-2.5 text-slate-700">
-                    {r.nome} {r.papel === 'socio' && <span className="text-xs text-slate-400">(sócio)</span>}
-                  </td>
-                  <td className={`px-4 py-2.5 ${r.tarefasAtrasadas > 0 ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
-                    {r.tarefasAtrasadas}
-                  </td>
-                  <td className={`px-4 py-2.5 ${r.conversasAguardando > 0 ? 'text-amber-600 font-semibold' : 'text-slate-500'}`}>
-                    {r.conversasAguardando}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="table-head">
+                  <th className="px-4 py-2 font-medium">Responsável</th>
+                  <th className="px-4 py-2 font-medium">Tarefas atrasadas</th>
+                  <th className="px-4 py-2 font-medium">Conversas aguardando resposta</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {porResponsavel.map((r) => (
+                  <tr key={r.nome} className="border-b border-slate-50">
+                    <td className="px-4 py-2.5 text-slate-700">
+                      {r.nome} {r.papel === 'socio' && <span className="text-xs text-slate-400">(sócio)</span>}
+                    </td>
+                    <td className={`px-4 py-2.5 ${r.tarefasAtrasadas > 0 ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
+                      {r.tarefasAtrasadas}
+                    </td>
+                    <td className={`px-4 py-2.5 ${r.conversasAguardando > 0 ? 'text-amber-600 font-semibold' : 'text-slate-500'}`}>
+                      {r.conversasAguardando}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

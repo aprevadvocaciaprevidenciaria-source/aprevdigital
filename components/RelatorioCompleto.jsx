@@ -237,39 +237,41 @@ export default function RelatorioCompleto({ preview }) {
               </div>
             </div>
 
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="table-head">
-                  <th className="px-3 py-2 font-medium">Mês</th>
-                  <th className="px-3 py-2 font-medium">Visualizações</th>
-                  <th className="px-3 py-2 font-medium">Variação</th>
-                  <th className="px-3 py-2 font-medium">Chamadas</th>
-                  <th className="px-3 py-2 font-medium">Rotas</th>
-                  <th className="px-3 py-2 font-medium">Cliques no site</th>
-                </tr>
-              </thead>
-              <tbody>
-                {analiseMetricas.porMes.map((m) => (
-                  <tr key={m.id || m.mes} className="border-b border-slate-50">
-                    <td className="px-3 py-2">{m.mes}</td>
-                    <td className="px-3 py-2">{m.visualizacoes}</td>
-                    <td className="px-3 py-2">
-                      {m.variacaoVisualizacoes === null ? (
-                        '—'
-                      ) : (
-                        <span className={m.variacaoVisualizacoes >= 0 ? 'text-secondary-700' : 'text-red-600'}>
-                          {m.variacaoVisualizacoes >= 0 ? '+' : ''}
-                          {m.variacaoVisualizacoes}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2">{m.chamadas}</td>
-                    <td className="px-3 py-2">{m.rotas}</td>
-                    <td className="px-3 py-2">{m.cliques_site}</td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="table-head">
+                    <th className="px-3 py-2 font-medium">Mês</th>
+                    <th className="px-3 py-2 font-medium">Visualizações</th>
+                    <th className="px-3 py-2 font-medium">Variação</th>
+                    <th className="px-3 py-2 font-medium">Chamadas</th>
+                    <th className="px-3 py-2 font-medium">Rotas</th>
+                    <th className="px-3 py-2 font-medium">Cliques no site</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {analiseMetricas.porMes.map((m) => (
+                    <tr key={m.id || m.mes} className="border-b border-slate-50">
+                      <td className="px-3 py-2">{m.mes}</td>
+                      <td className="px-3 py-2">{m.visualizacoes}</td>
+                      <td className="px-3 py-2">
+                        {m.variacaoVisualizacoes === null ? (
+                          '—'
+                        ) : (
+                          <span className={m.variacaoVisualizacoes >= 0 ? 'text-secondary-700' : 'text-red-600'}>
+                            {m.variacaoVisualizacoes >= 0 ? '+' : ''}
+                            {m.variacaoVisualizacoes}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">{m.chamadas}</td>
+                      <td className="px-3 py-2">{m.rotas}</td>
+                      <td className="px-3 py-2">{m.cliques_site}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </>
         )}
       </div>
