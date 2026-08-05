@@ -238,7 +238,7 @@ export default function Automacoes() {
   return (
     <Layout title="Automações">
       <p className="text-sm text-slate-500 mb-6 max-w-2xl">
-        Configure disparos automáticos de WhatsApp via WAME. O cron roda uma vez por dia; cobranças e follow-up de
+        Configure disparos automáticos de WhatsApp via Z-API. O cron roda uma vez por dia; cobranças e follow-up de
         leads nunca saem sozinhos — ficam numa fila de aprovação abaixo.
       </p>
 

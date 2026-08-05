@@ -84,7 +84,7 @@ export default function Privacidade() {
             <p>
               Não vendemos nem compartilhamos dados pessoais com terceiros para fins de marketing. Dados podem ser
               processados por prestadores de infraestrutura estritamente necessários ao funcionamento do Serviço
-              (hospedagem na Vercel, banco de dados no Supabase, envio de mensagens via WAME quando configurado),
+              (hospedagem na Vercel, banco de dados no Supabase, envio de mensagens via Z-API quando configurado),
               sempre sob obrigação de confidencialidade.
             </p>
           </section>
