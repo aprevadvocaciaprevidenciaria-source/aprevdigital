@@ -42,13 +42,13 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-brand-gradient px-4">
       <Head>
-        <title>Entrar · SEO Local Brasil</title>
+        <title>Entrar · APREV</title>
       </Head>
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
           <Logo size={56} className="rounded-xl mb-3" />
-          <h1 className="text-2xl font-display font-bold text-white">SEO Local Brasil</h1>
-          <p className="text-slate-300 text-sm mt-1">Painel de gestão de clientes e GBP</p>
+          <h1 className="text-2xl font-display font-bold text-white">APREV</h1>
+          <p className="text-slate-300 text-sm mt-1">Dr. Fábio Araújo · Advocacia Previdenciária</p>
         </div>
 
         <form onSubmit={handleSubmit} className="card space-y-4">
@@ -101,7 +101,7 @@ export default function Login() {
         </form>
 
         <p className="text-center text-xs text-slate-300 mt-6">
-          Acesso restrito à SEO Local Brasil
+          Acesso restrito à APREV Advocacia Previdenciária
         </p>
       </div>
     </div>

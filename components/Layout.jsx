@@ -17,32 +17,41 @@ import {
   Clock,
   Zap,
   Target,
-  Layers,
-  Wallet,
-  Megaphone,
-  Gift,
+  MessageCircle,
+  BookOpen,
+  Sparkles,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import Logo from './Logo'
 
+// roles: quem vê o item no menu (e pode acessar a rota). Sem "roles" = só
+// sócio/dono (acesso total). 'secretaria' cobre também qualquer papel de
+// colaborador que não seja sócio (gerente, colaborador genérico), como
+// visão restrita padrão mais segura enquanto não houver papel específico.
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/leads', label: 'Leads', icon: Target },
-  { href: '/clientes', label: 'Clientes', icon: Users },
-  { href: '/gestao', label: 'Gestão', icon: Layers },
-  { href: '/financeiro', label: 'Financeiro', icon: Wallet },
-  { href: '/tarefas', label: 'Tarefas', icon: CheckSquare },
+  { href: '/leads', label: 'Funil de Leads', icon: Target, roles: ['secretaria'] },
+  { href: '/conversas', label: 'Conversas WhatsApp', icon: MessageCircle, roles: ['secretaria'] },
+  { href: '/clientes', label: 'Casos', icon: Users, roles: ['secretaria'] },
+  { href: '/tarefas', label: 'Tarefas', icon: CheckSquare, roles: ['secretaria'] },
   { href: '/relatorios', label: 'Relatórios', icon: BarChart3 },
+  { href: '/digital', label: 'Central do Digital', icon: Sparkles },
   { href: '/automacoes', label: 'Automações', icon: Zap },
-  { href: '/portal-conteudo', label: 'Conteúdo do portal', icon: Megaphone },
-  { href: '/indicacoes', label: 'Indicações', icon: Gift },
+  { href: '/base-conhecimento', label: 'Base de Conhecimento IA', icon: BookOpen, roles: ['secretaria'] },
   { href: '/configuracoes', label: 'Configurações', icon: Settings },
 ]
+
+function podeAcessar(item, papel) {
+  const acessoTotal = !papel || papel === 'socio'
+  if (acessoTotal) return true
+  return (item.roles || []).includes('secretaria')
+}
 
 export default function Layout({ children, title }) {
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [userEmail, setUserEmail] = useState('')
+  const [papel, setPapel] = useState(null)
 
   const [searchTerm, setSearchTerm] = useState('')
   const [searchResults, setSearchResults] = useState([])
@@ -62,17 +71,32 @@ export default function Layout({ children, title }) {
       if (!user) return
       setUserEmail(user.email || '')
       const { data: perfil } = await supabase.from('users').select('tipo').eq('id', user.id).maybeSingle()
-      if (perfil?.tipo === 'cliente') router.replace('/portal')
+      if (perfil?.tipo === 'cliente') {
+        router.replace('/portal')
+        return
+      }
       if (perfil?.tipo === 'colaborador') {
         const { data: colaborador } = await supabase
           .from('colaboradores')
           .select('papel')
           .eq('login_user_id', user.id)
           .maybeSingle()
-        if (colaborador?.papel !== 'socio') router.replace('/minhas-tarefas')
+        setPapel(colaborador?.papel || 'colaborador')
       }
     })
   }, [router])
+
+  // Guarda de rota: se o papel logado não tem acesso a essa página, manda
+  // pra primeira seção que ele pode ver. É só camada de UI - o RLS no
+  // Supabase é quem garante de verdade que dado sensível não vaza.
+  useEffect(() => {
+    if (papel === null) return
+    const itemAtual = NAV_ITEMS.find((item) => router.pathname === item.href || router.pathname.startsWith(item.href + '/'))
+    if (itemAtual && !podeAcessar(itemAtual, papel)) {
+      const primeiroPermitido = NAV_ITEMS.find((item) => podeAcessar(item, papel))
+      router.replace(primeiroPermitido?.href || '/conversas')
+    }
+  }, [papel, router.pathname])
 
   useEffect(() => {
     async function loadNotifs() {
@@ -125,11 +149,11 @@ export default function Layout({ children, title }) {
     <>
       <div className="flex items-center gap-2 px-6 h-16 border-b border-white/10">
         <Logo size={32} />
-        <span className="text-white font-display font-bold text-lg">SEO Local Brasil</span>
+        <span className="text-white font-display font-bold text-lg leading-tight">APREV</span>
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {NAV_ITEMS.map((item) => {
+        {NAV_ITEMS.filter((item) => podeAcessar(item, papel)).map((item) => {
           const Icon = item.icon
           const active = router.pathname === item.href || router.pathname.startsWith(item.href + '/')
           return (
@@ -170,7 +194,7 @@ export default function Layout({ children, title }) {
   return (
     <div className="min-h-screen bg-fog">
       <Head>
-        <title>{title ? `${title} · SEO Local Brasil` : 'SEO Local Brasil'}</title>
+        <title>{title ? `${title} · APREV` : 'APREV Advocacia Previdenciária'}</title>
       </Head>
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:w-64 bg-brand-gradient">
@@ -207,13 +231,13 @@ export default function Layout({ children, title }) {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onFocus={() => setSearchOpen(true)}
-                placeholder="Buscar cliente..."
+                placeholder="Buscar caso..."
                 className="w-48 lg:w-64 pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent"
               />
               {searchOpen && searchTerm.trim().length >= 2 && (
                 <div className="absolute right-0 mt-1 w-72 bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden z-40">
                   {searchResults.length === 0 ? (
-                    <p className="px-4 py-3 text-sm text-slate-400">Nenhum cliente encontrado.</p>
+                    <p className="px-4 py-3 text-sm text-slate-400">Nenhum caso encontrado.</p>
                   ) : (
                     searchResults.map((c) => (
                       <Link

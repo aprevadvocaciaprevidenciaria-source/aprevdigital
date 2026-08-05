@@ -20,7 +20,16 @@ import { exportCsv } from '../lib/csv'
 import { formatCurrency } from '../lib/format'
 import { STATUS_META, STATUS_OPTIONS, statusMeta } from '../lib/status'
 
-const NICHOS_SUGERIDOS = ['Auto', 'Varejo', 'Alimentação', 'Serviços', 'Saúde', 'Beleza', 'Educação', 'Outro']
+const TIPOS_BENEFICIO = [
+  'Aposentadoria por idade',
+  'Aposentadoria por invalidez',
+  'Auxílio-doença',
+  'Auxílio-acidente',
+  'BPC/LOAS',
+  'Pensão por morte',
+  'Revisão de benefício',
+  'Outro',
+]
 
 const EMPTY_FORM = {
   nome: '',
@@ -39,8 +48,6 @@ const EMPTY_FORM = {
   data_fim_contrato: '',
   dia_vencimento: '',
   notas: '',
-  google_business_id: '',
-  link_avaliacao: '',
 }
 
 function diaDoMes(dataStr) {
@@ -48,7 +55,7 @@ function diaDoMes(dataStr) {
   return new Date(`${dataStr}T00:00:00`).getDate()
 }
 
-const PAGE_SIZE_KEY = 'seolocalbrasil_page_size'
+const PAGE_SIZE_KEY = 'aprev_page_size'
 
 export default function Clientes() {
   const router = useRouter()
@@ -117,8 +124,6 @@ export default function Clientes() {
       data_fim_contrato: cliente.data_fim_contrato || '',
       dia_vencimento: cliente.dia_vencimento ?? '',
       notas: cliente.notas || '',
-      google_business_id: cliente.google_business_id || '',
-      link_avaliacao: cliente.link_avaliacao || '',
     })
     setShowModal(true)
   }
@@ -161,7 +166,7 @@ export default function Clientes() {
     await loadClientes()
   }
 
-  const nichosDisponiveis = useMemo(
+  const tiposBeneficioDisponiveis = useMemo(
     () => Array.from(new Set(clientes.map((c) => c.nicho?.trim()).filter(Boolean))).sort(),
     [clientes]
   )
@@ -190,8 +195,8 @@ export default function Clientes() {
 
   function handleExport() {
     exportCsv(
-      'clientes-seolocalbrasil.csv',
-      ['Nome', 'CNPJ', 'Cidade', 'Nicho', 'Telefone', 'E-mail comercial', 'Contato', 'WhatsApp', 'Plano (R$)', 'Status', 'Início do contrato', 'Fim do contrato'],
+      'casos-aprev.csv',
+      ['Nome', 'CPF', 'Cidade', 'Tipo de benefício', 'Telefone', 'E-mail', 'Contato', 'WhatsApp', 'Honorário (R$)', 'Status', 'Início do contrato', 'Fim do contrato'],
       filtered.map((c) => [
         c.nome,
         c.cnpj,
@@ -211,7 +216,7 @@ export default function Clientes() {
 
   if (loading) {
     return (
-      <Layout title="Clientes">
+      <Layout title="Casos">
         <div className="flex items-center justify-center py-24">
           <Loader2 className="w-8 h-8 text-primary-800 animate-spin" />
         </div>
@@ -220,7 +225,7 @@ export default function Clientes() {
   }
 
   return (
-    <Layout title="Clientes">
+    <Layout title="Casos">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
         <div className="flex flex-col sm:flex-row gap-3 flex-1 flex-wrap">
           <div className="relative flex-1 max-w-sm">
@@ -241,8 +246,8 @@ export default function Clientes() {
             ))}
           </select>
           <select value={nichoFilter} onChange={(e) => setNichoFilter(e.target.value)} className="input-field sm:max-w-[160px]">
-            <option value="todos">Todos os nichos</option>
-            {nichosDisponiveis.map((n) => (
+            <option value="todos">Todos os benefícios</option>
+            {tiposBeneficioDisponiveis.map((n) => (
               <option key={n} value={n}>
                 {n}
               </option>
@@ -260,7 +265,7 @@ export default function Clientes() {
           </button>
           <button onClick={openCreateModal} className="btn-primary flex items-center gap-2 justify-center">
             <Plus className="w-4 h-4" />
-            Novo Cliente
+            Novo Caso
           </button>
         </div>
       </div>
@@ -269,17 +274,17 @@ export default function Clientes() {
         {paginated.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-slate-400">
             <Users className="w-10 h-10 mb-2" />
-            <p className="text-sm">Nenhum cliente encontrado.</p>
+            <p className="text-sm">Nenhum caso encontrado.</p>
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
               <tr className="table-head">
                 <th className="px-6 py-3 font-medium">Nome</th>
-                <th className="px-6 py-3 font-medium">Nicho</th>
+                <th className="px-6 py-3 font-medium">Benefício</th>
                 <th className="px-6 py-3 font-medium">Cidade</th>
                 <th className="px-6 py-3 font-medium">Contato</th>
-                <th className="px-6 py-3 font-medium">Plano</th>
+                <th className="px-6 py-3 font-medium">Honorário</th>
                 <th className="px-6 py-3 font-medium">Status</th>
                 <th className="px-6 py-3 font-medium text-right">Ações</th>
               </tr>
@@ -328,7 +333,7 @@ export default function Clientes() {
       {filtered.length > 0 && (
         <div className="flex items-center justify-between mt-4 text-sm text-slate-500">
           <span>
-            {filtered.length} cliente{filtered.length !== 1 ? 's' : ''} · página {page} de {totalPages}
+            {filtered.length} caso{filtered.length !== 1 ? 's' : ''} · página {page} de {totalPages}
           </span>
           <div className="flex items-center gap-2">
             <button
@@ -353,7 +358,7 @@ export default function Clientes() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-8 overflow-y-auto">
           <div className="bg-white rounded-xl w-full max-w-lg p-6 my-auto">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-display font-semibold text-night">{editingId ? 'Editar cliente' : 'Novo cliente'}</h2>
+              <h2 className="font-display font-semibold text-night">{editingId ? 'Editar caso' : 'Novo caso'}</h2>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
               </button>
@@ -361,7 +366,7 @@ export default function Clientes() {
 
             <form onSubmit={handleSave} className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Nome da empresa</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Nome do cliente</label>
                 <input
                   required
                   value={form.nome}
@@ -371,25 +376,25 @@ export default function Clientes() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">CNPJ</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">CPF</label>
                   <input
                     value={form.cnpj}
                     onChange={(e) => setForm({ ...form, cnpj: e.target.value })}
-                    placeholder="00.000.000/0000-00"
+                    placeholder="000.000.000-00"
                     className="input-field"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Nicho</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de benefício</label>
                   <input
-                    list="nichos-sugeridos"
+                    list="beneficios-sugeridos"
                     value={form.nicho}
                     onChange={(e) => setForm({ ...form, nicho: e.target.value })}
-                    placeholder="Ex: Auto, Varejo, Saúde..."
+                    placeholder="Ex: Auxílio-doença, Aposentadoria..."
                     className="input-field"
                   />
-                  <datalist id="nichos-sugeridos">
-                    {NICHOS_SUGERIDOS.map((n) => (
+                  <datalist id="beneficios-sugeridos">
+                    {TIPOS_BENEFICIO.map((n) => (
                       <option key={n} value={n} />
                     ))}
                   </datalist>
@@ -422,7 +427,7 @@ export default function Clientes() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">E-mail comercial</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">E-mail</label>
                 <input
                   type="email"
                   value={form.email_comercial}
@@ -432,7 +437,7 @@ export default function Clientes() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Nome do contato</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Nome de quem atende (se não for o cliente)</label>
                   <input
                     value={form.contato_nome}
                     onChange={(e) => setForm({ ...form, contato_nome: e.target.value })}
@@ -440,7 +445,7 @@ export default function Clientes() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">WhatsApp do contato</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">WhatsApp de contato</label>
                   <input
                     value={form.contato_whatsapp}
                     onChange={(e) => setForm({ ...form, contato_whatsapp: e.target.value })}
@@ -449,7 +454,7 @@ export default function Clientes() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">E-mail do contato</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">E-mail de contato</label>
                 <input
                   type="email"
                   value={form.contato_email}
@@ -459,7 +464,7 @@ export default function Clientes() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Valor do plano (R$)</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Valor dos honorários (R$)</label>
                   <input
                     type="number"
                     step="0.01"
@@ -500,7 +505,7 @@ export default function Clientes() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Dia de vencimento do plano</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Dia de vencimento da parcela</label>
                   <input
                     type="number"
                     min={1}
@@ -518,24 +523,6 @@ export default function Clientes() {
                   type="date"
                   value={form.data_fim_contrato}
                   onChange={(e) => setForm({ ...form, data_fim_contrato: e.target.value })}
-                  className="input-field"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">ID do Google Business Profile</label>
-                <input
-                  value={form.google_business_id}
-                  onChange={(e) => setForm({ ...form, google_business_id: e.target.value })}
-                  className="input-field"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Link direto de avaliação do Google (opcional)</label>
-                <input
-                  type="url"
-                  value={form.link_avaliacao}
-                  onChange={(e) => setForm({ ...form, link_avaliacao: e.target.value })}
-                  placeholder="https://g.page/r/.../review"
                   className="input-field"
                 />
               </div>

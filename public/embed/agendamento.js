@@ -1,5 +1,5 @@
 /*!
- * Widget de agendamento online - SEO Local Brasil.
+ * Widget de agendamento online - APREV Advocacia Previdenciária.
  * Uso: <div data-agendamento-slug="sos-car" data-agendamento-accent="#c9a24b"
  *      data-agendamento-servicos="Troca de óleo,Revisão geral,Outro"></div>
  *      <script src="https://painel.seolocalbrasil.com/embed/agendamento.js" defer></script>

@@ -53,12 +53,12 @@ export default function AgendamentoStatus() {
   return (
     <div className="min-h-screen bg-fog">
       <Head>
-        <title>Seu agendamento · SEO Local Brasil</title>
+        <title>Seu agendamento · APREV</title>
       </Head>
       <header className="border-b border-slate-200 bg-white">
         <div className="max-w-lg mx-auto px-4 py-4 flex items-center gap-2">
           <Logo size={32} />
-          <span className="font-display font-bold text-night">SEO Local Brasil</span>
+          <span className="font-display font-bold text-night">APREV Advocacia Previdenciária</span>
         </div>
       </header>
 

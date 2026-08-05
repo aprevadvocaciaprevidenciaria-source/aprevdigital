@@ -7,10 +7,10 @@ self.addEventListener('push', (event) => {
   try {
     data = event.data ? event.data.json() : {}
   } catch (err) {
-    data = { title: 'SEO Local Brasil', body: event.data ? event.data.text() : '' }
+    data = { title: 'APREV', body: event.data ? event.data.text() : '' }
   }
 
-  const title = data.title || 'SEO Local Brasil'
+  const title = data.title || 'APREV'
   const options = {
     body: data.body || '',
     icon: '/icon-192.png',

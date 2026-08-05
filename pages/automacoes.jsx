@@ -49,9 +49,9 @@ const EMPTY_TEMPLATE = {
 }
 
 const TIPO_LABELS = {
-  cobranca: 'Cobrança',
+  cobranca: 'Cobrança de honorários',
   relatorio_mensal: 'Relatório mensal',
-  solicitacao_imagens: 'Solicitação de fotos',
+  solicitacao_imagens: 'Solicitação de documentos',
   lead_followup: 'Follow-up de lead',
 }
 
@@ -68,18 +68,18 @@ const DEFAULT_CONFIG = {
   cobranca_ativa: false,
   cobranca_dias_antecedencia: 0,
   cobranca_template:
-    'Olá {{contato}}! Passando para lembrar que o plano {{empresa}} no valor de {{valor}} vence em {{vencimento}}. Qualquer dúvida, estamos à disposição!',
+    'Olá {{contato}}! Passando para lembrar que a parcela de honorários referente ao caso {{empresa}} no valor de {{valor}} vence em {{vencimento}}. Qualquer dúvida, estamos à disposição!',
   imagens_ativa: false,
   imagens_dias_semana: [1],
   imagens_qtd_minima: 3,
   imagens_template:
-    'Olá {{contato}}! Podem nos enviar de {{qtd_minima}} a 5 fotos recentes do dia a dia da {{empresa}} para atualizarmos o Google? 📸',
+    'Olá {{contato}}! Ainda faltam documentos pendentes no processo de {{empresa}} (RG, comprovante de residência, laudos médicos). Pode nos enviar quando conseguir? 📄',
   relatorio_template:
-    'Relatório GBP - {{empresa}}\nVisualizações: {{visualizacoes}}\nChamadas: {{chamadas}}\nSolicitações de rota: {{rotas}}\nCliques no site: {{cliques_site}}',
+    'Andamento do processo - {{empresa}}\nÚltima movimentação: {{visualizacoes}}\nPróximo prazo: {{chamadas}}',
   leads_followup_ativo: false,
   leads_followup_dias: 3,
   leads_followup_template:
-    'Olá {{nome}}! Vi que você entrou em contato com a SEO Local Brasil sobre {{empresa}} e queria saber se ainda tem interesse em conversarmos sobre como podemos ajudar. Posso te ligar essa semana?',
+    'Olá {{nome}}! Vi que você entrou em contato com a APREV sobre {{empresa}} e queria saber se ainda tem interesse em conversarmos sobre o seu benefício. Posso te ligar essa semana?',
 }
 
 const AMOSTRA_PREVIEW = {

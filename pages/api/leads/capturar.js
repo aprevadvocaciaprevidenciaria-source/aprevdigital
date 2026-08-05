@@ -41,8 +41,8 @@ export default async function handler(req, res) {
     auth: { persistSession: false, autoRefreshToken: false },
   })
 
-  // App de agência única por enquanto: o lead é atribuído ao primeiro
-  // usuário cadastrado (o dono da SEO Local Brasil).
+  // App de escritório único por enquanto: o lead é atribuído ao primeiro
+  // usuário cadastrado (o dono da APREV).
   const { data: dono } = await supabaseAdmin.from('users').select('id').order('created_at', { ascending: true }).limit(1).maybeSingle()
   if (!dono) {
     return res.status(500).json({ error: 'Nenhum usuário dono cadastrado no painel.' })

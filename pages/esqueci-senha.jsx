@@ -29,12 +29,12 @@ export default function EsqueciSenha() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-brand-gradient px-4">
       <Head>
-        <title>Recuperar senha · SEO Local Brasil</title>
+        <title>Recuperar senha · APREV</title>
       </Head>
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
           <Logo size={56} className="rounded-xl mb-3" />
-          <h1 className="text-2xl font-display font-bold text-white">SEO Local Brasil</h1>
+          <h1 className="text-2xl font-display font-bold text-white">APREV</h1>
           <p className="text-slate-300 text-sm mt-1">Recuperar acesso à sua conta</p>
         </div>
 

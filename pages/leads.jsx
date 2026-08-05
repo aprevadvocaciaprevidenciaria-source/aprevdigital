@@ -149,7 +149,7 @@ export default function Leads() {
             required
           />
           <input
-            placeholder="Empresa (opcional)"
+            placeholder="Indicado por (opcional)"
             value={novoLead.empresa}
             onChange={(e) => setNovoLead({ ...novoLead, empresa: e.target.value })}
             className="input-field"
@@ -239,7 +239,7 @@ export default function Leads() {
                         className="btn-primary flex items-center gap-1.5 text-sm"
                       >
                         {convertendoId === lead.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
-                        Converter em cliente
+                        Converter em caso
                       </button>
                       <button
                         onClick={() => atualizarStatus(lead, 'perdido')}

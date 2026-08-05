@@ -199,10 +199,10 @@ export default function Dashboard() {
       }))
     )
 
-    // Clientes por nicho
+    // Casos por tipo de benefício
     const porNicho = {}
     ;(clientes || []).forEach((c) => {
-      const nicho = c.nicho?.trim() || 'Sem nicho'
+      const nicho = c.nicho?.trim() || 'Sem benefício definido'
       porNicho[nicho] = (porNicho[nicho] || 0) + 1
     })
     setNichoData(
@@ -223,9 +223,9 @@ export default function Dashboard() {
   }
 
   const snapshotCards = [
-    { label: 'Clientes cadastrados', value: stats.totalClientes, icon: Users, color: 'bg-primary-50 text-primary-800', sensivel: true },
+    { label: 'Casos cadastrados', value: stats.totalClientes, icon: Users, color: 'bg-primary-50 text-primary-800', sensivel: true },
     {
-      label: 'Receita do mês (MRR)',
+      label: 'Honorários do mês',
       value: formatCurrency(stats.receitaMes),
       icon: Wallet,
       color: 'bg-secondary-50 text-secondary-700',
@@ -315,7 +315,7 @@ export default function Dashboard() {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <h2 className="font-display font-semibold text-night">Insights do Google Business Profile</h2>
+        <h2 className="font-display font-semibold text-night">Presença digital (Google) — em breve</h2>
         <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
           {PERIODOS.map((p) => (
             <button
@@ -406,9 +406,9 @@ export default function Dashboard() {
       </div>
 
       <div className="card mb-8">
-        <h2 className="font-display font-semibold text-night mb-4">Clientes por nicho</h2>
+        <h2 className="font-display font-semibold text-night mb-4">Casos por tipo de benefício</h2>
         {nichoData.length === 0 ? (
-          <p className="text-sm text-slate-400">Nenhum cliente cadastrado ainda.</p>
+          <p className="text-sm text-slate-400">Nenhum caso cadastrado ainda.</p>
         ) : (
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={nichoData}>
@@ -416,7 +416,7 @@ export default function Dashboard() {
               <XAxis dataKey="nicho" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
               <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
               <Tooltip />
-              <Bar dataKey="total" fill="#16233F" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="total" fill="#022251" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         )}

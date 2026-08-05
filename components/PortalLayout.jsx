@@ -69,7 +69,7 @@ export default function PortalLayout({ children, clienteNome, tabs, activeTab, o
           <p className="text-white font-display font-bold text-sm leading-tight truncate">
             {clienteNome || 'Portal do cliente'}
           </p>
-          <p className="text-xs text-slate-400 leading-tight">SEO Local Brasil</p>
+          <p className="text-xs text-slate-400 leading-tight">APREV Advocacia Previdenciária</p>
         </div>
       </div>
 
@@ -124,7 +124,7 @@ export default function PortalLayout({ children, clienteNome, tabs, activeTab, o
   return (
     <div className="min-h-screen bg-fog">
       <Head>
-        <title>{clienteNome ? `${clienteNome} · SEO Local Brasil` : 'Portal do cliente · SEO Local Brasil'}</title>
+        <title>{clienteNome ? `${clienteNome} · APREV` : 'Portal do cliente · APREV'}</title>
       </Head>
 
       {/* Menu lateral (desktop) */}

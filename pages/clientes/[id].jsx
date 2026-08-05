@@ -27,13 +27,12 @@ import { STATUS_META, statusMeta } from '../../lib/status'
 function buildConviteWhatsappUrl(cliente, email) {
   const contato = cliente.contato_nome || cliente.nome || 'tudo bem'
   const mensagem =
-    `Oi ${contato}! 🎉 Liberamos seu acesso ao portal exclusivo da SEO Local Brasil.\n\n` +
-    `Você vai receber um e-mail da nossa plataforma pra criar sua senha de acesso. Depois disso, é só entrar em painel.seolocalbrasil.com/login com o e-mail ${email}.\n\n` +
+    `Oi ${contato}! 🎉 Liberamos seu acesso ao portal do seu caso na APREV.\n\n` +
+    `Você vai receber um e-mail da nossa plataforma pra criar sua senha de acesso. Depois disso, é só entrar com o e-mail ${email}.\n\n` +
     `Lá você acompanha, em tempo real:\n` +
-    `📊 Visualizações, chamadas e solicitações de rota do seu perfil no Google\n` +
-    `⭐ Avaliações dos clientes\n` +
-    `📸 Fotos que estamos publicando\n` +
-    `📄 Relatórios mensais\n\n` +
+    `📄 Andamento do processo\n` +
+    `📅 Datas de perícia e prazos\n` +
+    `💬 Contato direto com a equipe\n\n` +
     `Qualquer dúvida, é só chamar por aqui!`
   const texto = encodeURIComponent(mensagem)
   let digits = (cliente.contato_whatsapp || '').replace(/\D/g, '')
@@ -45,7 +44,6 @@ function buildConviteWhatsappUrl(cliente, email) {
 
 const TABS = [
   { value: 'geral', label: 'Visão geral', icon: Building2 },
-  { value: 'onboarding', label: 'Onboarding', icon: FileText },
   { value: 'tarefas', label: 'Tarefas', icon: ClipboardList },
 ]
 
@@ -65,20 +63,20 @@ function buildOnboardingWaLink(cliente, clienteId, tipo) {
 }
 
 const FIELD_LABELS = {
-  nome: 'Nome da empresa',
-  cnpj: 'CNPJ',
+  nome: 'Nome do cliente',
+  cnpj: 'CPF',
   endereco: 'Endereço',
   cidade: 'Cidade',
   telefone: 'Telefone',
-  email_comercial: 'E-mail comercial',
-  contato_nome: 'Nome do contato',
-  contato_whatsapp: 'WhatsApp do contato',
-  contato_email: 'E-mail do contato',
-  nicho: 'Nicho',
-  plano_valor: 'Valor do plano',
+  email_comercial: 'E-mail',
+  contato_nome: 'Nome de quem atende',
+  contato_whatsapp: 'WhatsApp de contato',
+  contato_email: 'E-mail de contato',
+  nicho: 'Tipo de benefício',
+  plano_valor: 'Valor dos honorários',
   data_inicio_contrato: 'Início do contrato',
   data_fim_contrato: 'Fim do contrato',
-  dia_vencimento: 'Dia de vencimento do plano',
+  dia_vencimento: 'Dia de vencimento da parcela',
   google_business_id: 'ID do Google Business Profile',
   link_avaliacao: 'Link de avaliação do Google',
   ticket_medio: 'Ticket médio do cliente',

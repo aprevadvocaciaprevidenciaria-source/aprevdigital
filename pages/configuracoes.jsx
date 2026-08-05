@@ -22,6 +22,7 @@ const PAGE_SIZE_KEY = 'seolocalbrasil_page_size'
 const PAPEL_OPTIONS = [
   { value: 'socio', label: 'Sócio' },
   { value: 'gerente', label: 'Gerente' },
+  { value: 'secretaria', label: 'Secretária' },
   { value: 'colaborador', label: 'Colaborador' },
 ]
 

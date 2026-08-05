@@ -250,7 +250,7 @@ export default function Portal() {
       <PortalLayout>
         <div className="card text-center py-10">
           <p className="text-sm text-slate-500">
-            Sua conta ainda não está vinculada a nenhuma empresa. Fale com a SEO Local Brasil pra liberar seu
+            Sua conta ainda não está vinculada a nenhuma empresa. Fale com a APREV pra liberar seu
             acesso.
           </p>
         </div>

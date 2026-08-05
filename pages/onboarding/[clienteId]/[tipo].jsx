@@ -87,7 +87,7 @@ export default function OnboardingForm() {
           <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-3" />
           <h1 className="text-lg font-display font-semibold text-night mb-1">Link inválido</h1>
           <p className="text-sm text-slate-500">
-            Esse link de formulário não é válido. Peça pra SEO Local Brasil te enviar o link correto.
+            Esse link de formulário não é válido. Peça pra APREV te enviar o link correto.
           </p>
         </div>
       </div>
@@ -111,14 +111,14 @@ export default function OnboardingForm() {
   return (
     <div className="min-h-screen bg-brand-gradient px-4 py-10">
       <Head>
-        <title>{schema.title} · SEO Local Brasil</title>
+        <title>{schema.title} · APREV</title>
       </Head>
       <div className="w-full max-w-xl mx-auto">
         <div className="flex flex-col items-center mb-8">
           <Logo size={56} className="rounded-xl mb-3" />
           <h1 className="text-2xl font-display font-bold text-white text-center">{schema.title}</h1>
           <p className="text-slate-300 text-sm mt-1 text-center">
-            {clienteNome} · SEO Local Brasil
+            {clienteNome} · APREV
           </p>
         </div>
 
