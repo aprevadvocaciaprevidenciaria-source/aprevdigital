@@ -66,7 +66,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: error.message })
   }
 
-  // Aviso por WhatsApp é best-effort: se a WAME não estiver configurada
+  // Aviso por WhatsApp é best-effort: se a Z-API não estiver configurada
   // ainda, ou der erro, o lead já foi salvo mesmo assim.
   try {
     const { data: donoCompleto } = await supabaseAdmin
