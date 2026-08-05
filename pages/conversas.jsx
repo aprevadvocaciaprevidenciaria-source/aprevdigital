@@ -26,6 +26,9 @@ export default function Conversas() {
   const [carregandoThread, setCarregandoThread] = useState(false)
   const [resposta, setResposta] = useState('')
   const [enviando, setEnviando] = useState(false)
+  const [erroEnvio, setErroEnvio] = useState('')
+  const [gerandoSugestao, setGerandoSugestao] = useState(false)
+  const [erroSugestao, setErroSugestao] = useState('')
   const [mostrarForm, setMostrarForm] = useState(false)
   const [novaConversa, setNovaConversa] = useState(EMPTY_CONVERSA)
   const [salvandoConversa, setSalvandoConversa] = useState(false)
@@ -99,43 +102,66 @@ export default function Conversas() {
     e.preventDefault()
     if (!resposta.trim() || !conversaSelecionada) return
     setEnviando(true)
+    setErroEnvio('')
 
-    const { data: msg, error } = await supabase
-      .from('mensagens_conversa')
-      .insert([
-        {
-          conversa_id: conversaSelecionada.id,
-          direcao: 'enviada',
-          remetente: 'secretaria',
-          texto: resposta.trim(),
-        },
+    const textoEnviado = resposta.trim()
+    const { data: sessionData } = await supabase.auth.getSession()
+    const token = sessionData?.session?.access_token
+
+    const resp = await fetch('/api/conversas/enviar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ conversaId: conversaSelecionada.id, mensagem: textoEnviado }),
+    })
+    const data = await resp.json().catch(() => ({}))
+
+    if (resp.ok) {
+      const agora = new Date().toISOString()
+      // Mostra otimista na tela - a mensagem "de verdade" chega logo em seguida
+      // via webhook da Z-API (o mesmo n8n que já grava todo o histórico), então
+      // não gravamos em mensagens_conversa aqui pra não duplicar.
+      setMensagens((prev) => [
+        ...prev,
+        { id: `otimista-${Date.now()}`, conversa_id: conversaSelecionada.id, direcao: 'enviada', remetente: 'secretaria', texto: textoEnviado, enviado_em: agora },
       ])
-      .select()
-      .single()
-
-    if (!error) {
-      setMensagens((prev) => [...prev, msg])
-      await supabase
-        .from('conversas_whatsapp')
-        .update({
-          ultima_mensagem_em: msg.enviado_em,
-          ultima_mensagem_preview: resposta.trim().slice(0, 140),
-          status: 'aguardando_resposta',
-        })
-        .eq('id', conversaSelecionada.id)
       setConversas((prev) =>
         prev
           .map((c) =>
             c.id === conversaSelecionada.id
-              ? { ...c, ultima_mensagem_em: msg.enviado_em, ultima_mensagem_preview: resposta.trim().slice(0, 140), status: 'aguardando_resposta' }
+              ? { ...c, ultima_mensagem_em: agora, ultima_mensagem_preview: textoEnviado.slice(0, 140), status: 'aberta' }
               : c
           )
           .sort((a, b) => new Date(b.ultima_mensagem_em || b.created_at) - new Date(a.ultima_mensagem_em || a.created_at))
       )
       setResposta('')
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
+    } else {
+      setErroEnvio(data?.error || 'Falha ao enviar a mensagem pelo WhatsApp.')
     }
     setEnviando(false)
+  }
+
+  async function gerarSugestao() {
+    if (!conversaSelecionada || gerandoSugestao) return
+    setGerandoSugestao(true)
+    setErroSugestao('')
+
+    const { data: sessionData } = await supabase.auth.getSession()
+    const token = sessionData?.session?.access_token
+
+    const resp = await fetch('/api/conversas/sugestao', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ conversaId: conversaSelecionada.id }),
+    })
+    const data = await resp.json().catch(() => ({}))
+
+    if (resp.ok) {
+      setSugestao(data.sugestao)
+    } else {
+      setErroSugestao(data?.error || 'Falha ao gerar sugestão.')
+    }
+    setGerandoSugestao(false)
   }
 
   async function atualizarStatusConversa(status) {
@@ -304,7 +330,7 @@ export default function Conversas() {
                 <div ref={bottomRef} />
               </div>
 
-              {sugestao && (
+              {sugestao ? (
                 <div className="mx-4 mb-3 p-3 rounded-xl border border-secondary-300 bg-secondary-50 flex items-start gap-2">
                   <Sparkles className="w-4 h-4 text-secondary-600 flex-shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
@@ -319,6 +345,24 @@ export default function Conversas() {
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
+                </div>
+              ) : (
+                <div className="mx-4 mb-3 flex items-center justify-between gap-2">
+                  <button
+                    onClick={gerarSugestao}
+                    disabled={gerandoSugestao}
+                    className="text-xs flex items-center gap-1.5 text-secondary-700 hover:text-secondary-800 font-medium px-2.5 py-1.5 rounded-lg hover:bg-secondary-50 disabled:opacity-50"
+                  >
+                    {gerandoSugestao ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                    {gerandoSugestao ? 'Gerando sugestão...' : 'Gerar sugestão da IA'}
+                  </button>
+                  {erroSugestao && <p className="text-xs text-red-600">{erroSugestao}</p>}
+                </div>
+              )}
+
+              {erroEnvio && (
+                <div className="mx-4 mb-2 px-3 py-2 rounded-lg bg-red-50 text-red-700 text-xs border border-red-200">
+                  {erroEnvio}
                 </div>
               )}
 
