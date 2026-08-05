@@ -48,14 +48,17 @@ export default async function handler(req, res) {
   // App de escritório único por enquanto: toda conversa cai na conta do
   // primeiro usuário cadastrado (o dono da APREV) - mesmo padrão já usado em
   // pages/api/leads/capturar.js.
-  const { data: dono } = await supabaseAdmin
+  const { data: dono, error: erroDono } = await supabaseAdmin
     .from('users')
     .select('id')
     .order('created_at', { ascending: true })
     .limit(1)
     .maybeSingle()
+  if (erroDono) {
+    return res.status(500).json({ error: `Falha ao consultar users: ${erroDono.message}` })
+  }
   if (!dono) {
-    return res.status(500).json({ error: 'Nenhum usuário dono cadastrado no painel.' })
+    return res.status(500).json({ error: 'Nenhum usuário dono cadastrado no painel (consulta OK, mas veio vazia - confira se SUPABASE_SERVICE_ROLE_KEY é mesmo a service_role e não a anon).' })
   }
 
   let { data: conversa } = await supabaseAdmin
