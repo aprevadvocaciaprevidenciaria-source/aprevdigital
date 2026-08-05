@@ -1,10 +1,45 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
-import { Loader2, Plus, Send, Sparkles, Phone, X, MessageCircle } from 'lucide-react'
+import { Loader2, Plus, Send, Sparkles, Phone, X, MessageCircle, FileText, Download } from 'lucide-react'
 import Layout from '../components/Layout'
 import { supabase } from '../lib/supabase'
 import { resolveEquipeContext } from '../lib/session'
 import { formatDateTime } from '../lib/format'
+import { tocarSomNotificacao } from '../lib/notificationSound'
+
+const EXT_IMAGEM = ['jpg', 'jpeg', 'png', 'webp', 'gif']
+const EXT_VIDEO = ['mp4', 'mov', '3gp', 'webm']
+const EXT_AUDIO = ['ogg', 'oga', 'mp3', 'm4a', 'aac', 'opus']
+
+function extensaoDe(url) {
+  const semQuery = (url || '').split('?')[0]
+  const partes = semQuery.split('.')
+  return partes.length > 1 ? partes.pop().toLowerCase() : ''
+}
+
+function MensagemMidia({ url }) {
+  const ext = extensaoDe(url)
+  if (EXT_IMAGEM.includes(ext)) {
+    return (
+      <a href={url} target="_blank" rel="noreferrer">
+        <img src={url} alt="Imagem enviada" className="rounded-lg max-w-full max-h-64 mb-1" />
+      </a>
+    )
+  }
+  if (EXT_VIDEO.includes(ext)) {
+    return <video src={url} controls className="rounded-lg max-w-full max-h-64 mb-1" />
+  }
+  if (EXT_AUDIO.includes(ext)) {
+    return <audio src={url} controls className="mb-1 max-w-full" />
+  }
+  return (
+    <a href={url} target="_blank" rel="noreferrer" className="flex items-center gap-2 mb-1 underline">
+      <FileText className="w-4 h-4 flex-shrink-0" />
+      Ver arquivo
+      <Download className="w-3.5 h-3.5 flex-shrink-0" />
+    </a>
+  )
+}
 
 const STATUS_META = {
   aberta: { label: 'Aberta', badge: 'bg-sky-100 text-sky-700' },
@@ -33,6 +68,11 @@ export default function Conversas() {
   const [novaConversa, setNovaConversa] = useState(EMPTY_CONVERSA)
   const [salvandoConversa, setSalvandoConversa] = useState(false)
   const bottomRef = useRef(null)
+  const conversaSelecionadaRef = useRef(null)
+
+  useEffect(() => {
+    conversaSelecionadaRef.current = conversaSelecionada
+  }, [conversaSelecionada])
 
   useEffect(() => {
     async function init() {
@@ -48,6 +88,62 @@ export default function Conversas() {
     }
     init()
   }, [router])
+
+  // Tempo real: qualquer mensagem/conversa nova (de qualquer secretária, em
+  // qualquer aba aberta) chega aqui sem precisar dar F5. Um único canal pra
+  // vida inteira da página - usa a ref pra saber qual conversa está aberta
+  // no momento em que o evento chega, sem precisar reabrir a inscrição toda
+  // vez que a seleção muda.
+  useEffect(() => {
+    if (loading) return
+
+    const canal = supabase
+      .channel('conversas-realtime')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensagens_conversa' }, (payload) => {
+        const nova = payload.new
+        const aberta = conversaSelecionadaRef.current
+        if (aberta && nova.conversa_id === aberta.id) {
+          setMensagens((prev) => {
+            if (prev.some((m) => m.id === nova.id)) return prev
+            const idxOtimista = prev.findIndex(
+              (m) => typeof m.id === 'string' && m.id.startsWith('otimista-') && m.direcao === nova.direcao && m.texto === nova.texto
+            )
+            if (idxOtimista >= 0) {
+              const copia = [...prev]
+              copia[idxOtimista] = nova
+              return copia
+            }
+            return [...prev, nova]
+          })
+          setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
+          if (nova.direcao === 'recebida') {
+            // Já está com a conversa aberta na tela - marca como lida na hora
+            // em vez de deixar o badge de não lidas acender à toa.
+            supabase.from('conversas_whatsapp').update({ nao_lidas: 0 }).eq('id', aberta.id).then(() => {})
+          }
+        }
+        if (nova.direcao === 'recebida') {
+          tocarSomNotificacao()
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversas_whatsapp' }, (payload) => {
+        const linha = payload.new
+        if (!linha) return
+        setConversas((prev) => {
+          const existe = prev.some((c) => c.id === linha.id)
+          const atualizadas = existe ? prev.map((c) => (c.id === linha.id ? { ...c, ...linha } : c)) : [linha, ...prev]
+          return atualizadas.sort((a, b) => new Date(b.ultima_mensagem_em || b.created_at) - new Date(a.ultima_mensagem_em || a.created_at))
+        })
+        if (conversaSelecionadaRef.current?.id === linha.id) {
+          setConversaSelecionada((prev) => (prev ? { ...prev, ...linha } : prev))
+        }
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(canal)
+    }
+  }, [loading])
 
   async function carregarConversas() {
     const { data } = await supabase
@@ -318,7 +414,8 @@ export default function Conversas() {
                           m.direcao === 'enviada' ? 'bg-primary-800 text-white' : 'bg-slate-100 text-slate-700'
                         }`}
                       >
-                        <p className="whitespace-pre-wrap">{m.texto}</p>
+                        {m.midia_url && <MensagemMidia url={m.midia_url} />}
+                        {m.texto && <p className="whitespace-pre-wrap">{m.texto}</p>}
                         <p className={`text-[10px] mt-1 ${m.direcao === 'enviada' ? 'text-primary-200' : 'text-slate-400'}`}>
                           {formatDateTime(m.enviado_em)}
                           {m.remetente === 'ia' && ' · IA'}

@@ -21,11 +21,17 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, ignorado: true })
   }
 
-  // Só tratamos mensagem de texto por enquanto; mídia (imagem/áudio/documento)
-  // ainda entra na conversa como um marcador, pra não sumir da linha do tempo.
-  const texto = body.text?.message || body.body || null
-  const temMidia = !!(body.image || body.audio || body.document || body.video || body.sticker)
-  if (!texto && !temMidia) {
+  // Mídia: a Z-API manda um objeto por tipo (image.imageUrl, video.videoUrl,
+  // audio.audioUrl, document.documentUrl, sticker.stickerUrl), cada um com
+  // legenda opcional em .caption. Guardamos a URL em midia_url; o front decide
+  // como renderizar (imagem/vídeo/áudio/link) pela extensão do arquivo.
+  const midia = body.image || body.video || body.audio || body.document || body.sticker || null
+  const midiaUrl = midia?.imageUrl || midia?.videoUrl || midia?.audioUrl || midia?.documentUrl || midia?.stickerUrl || null
+  const legendasPorTipo = { image: '📷 Foto', video: '🎥 Vídeo', audio: '🎤 Áudio', document: '📄 Documento', sticker: '🎨 Figurinha' }
+  const tipoMidia = body.image ? 'image' : body.video ? 'video' : body.audio ? 'audio' : body.document ? 'document' : body.sticker ? 'sticker' : null
+
+  const texto = body.text?.message || body.body || midia?.caption || null
+  if (!texto && !midiaUrl) {
     return res.status(200).json({ ok: true, ignorado: true })
   }
 
@@ -33,7 +39,7 @@ export default async function handler(req, res) {
   const messageId = body.messageId || body.id || null
   const nomeContato = body.chatName || body.senderName || null
   const momento = body.momment ? new Date(Number(body.momment)) : new Date()
-  const preview = texto || '[mídia]'
+  const preview = texto || (tipoMidia ? legendasPorTipo[tipoMidia] : '[mídia]')
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -99,7 +105,8 @@ export default async function handler(req, res) {
     conversa_id: conversa.id,
     direcao: fromMe ? 'enviada' : 'recebida',
     remetente: fromMe ? 'secretaria' : 'contato',
-    texto: texto || '[mídia recebida]',
+    texto: texto || (midiaUrl ? null : '[mídia recebida]'),
+    midia_url: midiaUrl,
     message_id_externo: messageId,
     enviado_em: momento.toISOString(),
     lida: fromMe,
