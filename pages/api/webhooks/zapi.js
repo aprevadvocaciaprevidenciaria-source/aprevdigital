@@ -16,7 +16,14 @@ export default async function handler(req, res) {
 
   const body = req.body || {}
 
-  let telefone = String(body.phone || '').replace(/\D/g, '')
+  const phoneOriginal = String(body.phone || '')
+  // O WhatsApp às vezes manda um "LID" (identificador de privacidade novo,
+  // formato "123456@lid") no lugar do telefone de verdade, pro mesmo contato
+  // - dependendo de como a mensagem chegou (ex: através de um anúncio ou
+  // dispositivo vinculado). Sem isso, o mesmo cliente vira duas conversas
+  // diferentes no painel.
+  const ehLid = phoneOriginal.includes('@lid')
+  let telefone = phoneOriginal.replace(/\D/g, '')
   if (!telefone) {
     return res.status(200).json({ ok: true, ignorado: true })
   }
@@ -73,6 +80,19 @@ export default async function handler(req, res) {
     .eq('user_id', dono.id)
     .eq('telefone', telefone)
     .maybeSingle()
+
+  // Se veio de um LID e ainda não existe conversa pra esse LID específico,
+  // tenta juntar com uma conversa já existente do mesmo nome de contato (que
+  // provavelmente tem o telefone de verdade) em vez de criar uma segunda.
+  if (!conversa && ehLid && nomeContato) {
+    const { data: porNome } = await supabaseAdmin
+      .from('conversas_whatsapp')
+      .select('id, nao_lidas')
+      .eq('user_id', dono.id)
+      .eq('nome_contato', nomeContato)
+      .maybeSingle()
+    if (porNome) conversa = porNome
+  }
 
   if (!conversa) {
     const { data: novaConversa, error: erroConversa } = await supabaseAdmin
