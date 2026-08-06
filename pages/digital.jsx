@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
-import { Loader2, Plus, X, ArrowRight, Trash2, Pencil, Instagram, Calendar, Link2 } from 'lucide-react'
+import { Loader2, Plus, X, ArrowRight, Trash2, Pencil, Instagram, Calendar, Link2, Sparkles } from 'lucide-react'
 import Layout from '../components/Layout'
 import { supabase } from '../lib/supabase'
 import { formatDate } from '../lib/format'
@@ -44,6 +44,8 @@ export default function Digital() {
   const [editandoId, setEditandoId] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [salvando, setSalvando] = useState(false)
+  const [gerandoIdeias, setGerandoIdeias] = useState(false)
+  const [erroIdeias, setErroIdeias] = useState('')
 
   useEffect(() => {
     async function init() {
@@ -120,6 +122,29 @@ export default function Digital() {
     setItens((prev) => prev.filter((i) => i.id !== id))
   }
 
+  async function gerarIdeias() {
+    if (gerandoIdeias) return
+    setGerandoIdeias(true)
+    setErroIdeias('')
+
+    const { data: sessionData } = await supabase.auth.getSession()
+    const token = sessionData?.session?.access_token
+
+    const resp = await fetch('/api/digital/gerar-ideias', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({}),
+    })
+    const data = await resp.json().catch(() => ({}))
+
+    if (resp.ok) {
+      setItens((prev) => [...(data.criados || []), ...prev])
+    } else {
+      setErroIdeias(data?.error || 'Falha ao gerar ideias.')
+    }
+    setGerandoIdeias(false)
+  }
+
   async function avancarStatus(item) {
     const idx = STATUS_ORDER.indexOf(item.status)
     if (idx === -1 || idx === STATUS_ORDER.length - 1) return
@@ -176,11 +201,25 @@ export default function Digital() {
             </button>
           ))}
         </div>
-        <button onClick={novo} className="btn-primary flex items-center gap-2 text-sm">
-          <Plus className="w-4 h-4" />
-          Novo item
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={gerarIdeias}
+            disabled={gerandoIdeias}
+            className="btn-secondary flex items-center gap-2 text-sm disabled:opacity-50"
+          >
+            {gerandoIdeias ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+            {gerandoIdeias ? 'Gerando ideias...' : 'Gerar ideias com IA'}
+          </button>
+          <button onClick={novo} className="btn-primary flex items-center gap-2 text-sm">
+            <Plus className="w-4 h-4" />
+            Novo item
+          </button>
+        </div>
       </div>
+
+      {erroIdeias && (
+        <div className="mb-4 px-3 py-2 rounded-lg bg-red-50 text-red-700 text-sm border border-red-200">{erroIdeias}</div>
+      )}
 
       {mostrarForm && (
         <form onSubmit={salvar} className="card space-y-3 mb-6">
