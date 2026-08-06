@@ -18,7 +18,14 @@ export const config = {
 // de fs.readFileSync em runtime) pro build do Next.js garantir que o
 // conteúdo entra no bundle da função serverless na Vercel - mesmo raciocínio
 // do data/biblioteca-ia.json.
-const SYSTEM_PROMPT = Object.values(promptFontes).join('\n\n---\n\n')
+// "Maia" é nome de persona interno do pacote comprado - o painel apresenta
+// essa IA pro usuário como "APREV Digital" (item de menu, título de página),
+// então instrui o modelo a se referir a si mesma por esse nome, sem reescrever
+// o pacote inteiro (que usa "Maia" internamente em várias partes do prompt).
+const SYSTEM_PROMPT =
+  Object.values(promptFontes).join('\n\n---\n\n') +
+  '\n\n---\n\nInstrução do painel: ao se apresentar ou se referir a si mesma na conversa, use o nome "APREV ' +
+  'Digital", não "Maia". "Maia" é um nome de projeto interno e não deve aparecer nas respostas pro usuário.'
 
 async function usuarioAutenticado(req) {
   const authHeader = req.headers.authorization
@@ -226,7 +233,7 @@ export default async function handler(req, res) {
     await result.pipeUIMessageStreamToResponse(res)
   } catch (err) {
     if (!res.headersSent) {
-      res.status(500).json({ error: err.message || 'Falha ao gerar resposta da Maia.' })
+      res.status(500).json({ error: err.message || 'Falha ao gerar resposta da APREV Digital.' })
     }
   }
 }

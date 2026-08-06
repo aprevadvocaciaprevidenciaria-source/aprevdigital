@@ -32,6 +32,10 @@ import Logo from './Logo'
 // visão restrita padrão mais segura enquanto não houver papel específico.
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  // Nome de exibição é "APREV Digital" - "Maia" é só o nome interno do
+  // projeto/persona (pacote "Escritório IA"), não deve aparecer pra
+  // usuário. Rota (/maia) e nomes internos (tabelas, etc.) continuam Maia.
+  { href: '/maia', label: 'APREV Digital', icon: Bot, roles: ['secretaria'] },
   { href: '/leads', label: 'Funil de Leads', icon: Target, roles: ['secretaria'] },
   { href: '/conversas', label: 'Conversas WhatsApp', icon: MessageCircle, roles: ['secretaria'] },
   { href: '/clientes', label: 'Casos', icon: Users, roles: ['secretaria'] },
@@ -41,7 +45,6 @@ const NAV_ITEMS = [
   { href: '/automacoes', label: 'Automações', icon: Zap },
   { href: '/base-conhecimento', label: 'Base de Conhecimento IA', icon: BookOpen, roles: ['secretaria'] },
   { href: '/biblioteca-ia', label: 'Biblioteca Jurídica IA', icon: Library, roles: ['secretaria'] },
-  { href: '/maia', label: 'Assistente Maia', icon: Bot, roles: ['secretaria'] },
   { href: '/configuracoes', label: 'Configurações', icon: Settings },
 ]
 

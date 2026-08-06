@@ -321,8 +321,8 @@ export default function Configuracoes() {
               </p>
               <p className="text-xs text-slate-400">
                 A sincronização automática de métricas e avaliações ainda está sendo finalizada — por enquanto os
-                dados continuam sendo lançados manualmente. O acesso ao Google Drive (pra Maia ler arquivos de
-                clientes) já está ativo com essa conexão.
+                dados continuam sendo lançados manualmente. O acesso ao Google Drive (pra APREV Digital ler
+                arquivos de clientes) já está ativo com essa conexão.
               </p>
               <button onClick={handleDesconectarGoogle} className="btn-secondary flex items-center gap-2 text-sm">
                 <Unlink className="w-4 h-4" />
@@ -333,8 +333,9 @@ export default function Configuracoes() {
             <>
               <p className="text-sm text-slate-500">
                 Conecte a conta Google do escritório pra: sincronizar métricas/avaliações do Google Business Profile,
-                e liberar a Maia pra ler arquivos do Google Drive vinculados aos clientes (aba Assistente Maia). Cada
-                cliente precisa te dar acesso de "Gerente" no Google Business Profile dele antes de sincronizar.
+                e liberar a APREV Digital pra ler arquivos do Google Drive vinculados aos clientes (aba APREV
+                Digital). Cada cliente precisa te dar acesso de "Gerente" no Google Business Profile dele antes de
+                sincronizar.
               </p>
               <button
                 onClick={handleConectarGoogle}

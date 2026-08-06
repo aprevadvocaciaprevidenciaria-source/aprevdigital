@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
-import Link from 'next/link'
 import {
   ArrowLeft,
   Loader2,
@@ -10,18 +9,14 @@ import {
   Plus,
   CheckSquare,
   Pencil,
-  RefreshCw,
   Building2,
   ClipboardList,
-  FileText,
-  Send,
-  Layers,
+  FolderOpen,
   ExternalLink,
 } from 'lucide-react'
 import Layout from '../../components/Layout'
 import { supabase } from '../../lib/supabase'
-import { formatCurrency, formatDate, formatDateTime } from '../../lib/format'
-import { ONBOARDING_LABELS, onboardingFieldLabel } from '../../lib/onboardingSchemas'
+import { formatCurrency, formatDate } from '../../lib/format'
 import { STATUS_META, statusMeta } from '../../lib/status'
 
 function buildConviteWhatsappUrl(cliente, email) {
@@ -47,41 +42,21 @@ const TABS = [
   { value: 'tarefas', label: 'Tarefas', icon: ClipboardList },
 ]
 
-function buildOnboardingWaLink(cliente, clienteId, tipo) {
-  const contato = cliente.contato_nome || cliente.nome || 'tudo bem'
-  const link = `https://painel.seolocalbrasil.com/onboarding/${clienteId}/${tipo}`
-  const tipoLabel = tipo === 'criacao' ? 'criação do seu perfil' : 'otimização do seu perfil'
-  const mensagem =
-    `Oi ${contato}! Pra darmos início à ${tipoLabel} no Google Maps, precisamos de algumas informações suas.\n\n` +
-    `Pode preencher esse formulário rapidinho? ${link}\n\n` +
-    `Leva só alguns minutos. Qualquer dúvida, é só chamar!`
-  let digits = (cliente.contato_whatsapp || '').replace(/\D/g, '')
-  if (digits && !digits.startsWith('55') && (digits.length === 10 || digits.length === 11)) {
-    digits = `55${digits}`
-  }
-  return digits ? `https://wa.me/${digits}?text=${encodeURIComponent(mensagem)}` : `https://wa.me/?text=${encodeURIComponent(mensagem)}`
-}
-
 const FIELD_LABELS = {
   nome: 'Nome do cliente',
   cnpj: 'CPF',
+  nicho: 'Tipo de benefício',
   endereco: 'Endereço',
   cidade: 'Cidade',
   telefone: 'Telefone',
   email_comercial: 'E-mail',
-  contato_nome: 'Nome de quem atende',
+  contato_nome: 'Nome de quem atende (se não for o cliente)',
   contato_whatsapp: 'WhatsApp de contato',
   contato_email: 'E-mail de contato',
-  nicho: 'Tipo de benefício',
   plano_valor: 'Valor dos honorários',
   data_inicio_contrato: 'Início do contrato',
   data_fim_contrato: 'Fim do contrato',
   dia_vencimento: 'Dia de vencimento da parcela',
-  google_business_id: 'ID do Google Business Profile',
-  link_avaliacao: 'Link de avaliação do Google',
-  link_pasta_drive: 'Pasta do Google Drive',
-  ticket_medio: 'Ticket médio do cliente',
-  taxa_conversao_estimada: 'Taxa de conversão estimada',
 }
 
 export default function ClienteDetalhe() {
@@ -98,11 +73,10 @@ export default function ClienteDetalhe() {
   const [novaTarefa, setNovaTarefa] = useState('')
   const [accessToken, setAccessToken] = useState(null)
   const [clienteAcesso, setClienteAcesso] = useState(null)
-  const [onboardingSubmissions, setOnboardingSubmissions] = useState([])
-  const [onboardingAberto, setOnboardingAberto] = useState(null)
   const [emailConvite, setEmailConvite] = useState('')
   const [enviandoConvite, setEnviandoConvite] = useState(false)
   const [conviteMsg, setConviteMsg] = useState('')
+  const [savingDrive, setSavingDrive] = useState(false)
 
   useEffect(() => {
     async function init() {
@@ -124,19 +98,23 @@ export default function ClienteDetalhe() {
       { data: cliente },
       { data: tarefasData },
       { data: acessoData },
-      { data: onboardingData },
     ] = await Promise.all([
       supabase.from('clientes').select('*').eq('id', id).single(),
       supabase.from('tarefas').select('*').eq('cliente_id', id).order('created_at', { ascending: false }),
       supabase.from('users').select('id, email').eq('cliente_id', id).eq('tipo', 'cliente').maybeSingle(),
-      supabase.from('onboarding_submissions').select('*').eq('cliente_id', id).order('created_at', { ascending: false }),
     ])
 
     setForm(cliente)
     setTarefas(tarefasData || [])
     setClienteAcesso(acessoData || null)
-    setOnboardingSubmissions(onboardingData || [])
     setLoading(false)
+  }
+
+  async function handleSaveDrivePasta(e) {
+    e.preventDefault()
+    setSavingDrive(true)
+    await supabase.from('clientes').update({ link_pasta_drive: form.link_pasta_drive || null }).eq('id', id)
+    setSavingDrive(false)
   }
 
   async function handleConvidarCliente(e) {
@@ -172,8 +150,7 @@ export default function ClienteDetalhe() {
     const {
       nome, cnpj, endereco, cidade, telefone, email_comercial,
       contato_nome, contato_whatsapp, contato_email, nicho, plano_valor,
-      status, data_inicio_contrato, data_fim_contrato, dia_vencimento, notas, google_business_id, link_avaliacao,
-      link_pasta_drive, ticket_medio, taxa_conversao_estimada, plano_gestao,
+      status, data_inicio_contrato, data_fim_contrato, dia_vencimento, notas,
     } = form
     await supabase
       .from('clientes')
@@ -186,12 +163,6 @@ export default function ClienteDetalhe() {
         data_fim_contrato: data_fim_contrato || null,
         dia_vencimento: dia_vencimento === '' || dia_vencimento === null ? null : Number(dia_vencimento),
         notas,
-        google_business_id,
-        link_avaliacao: link_avaliacao || null,
-        link_pasta_drive: link_pasta_drive || null,
-        plano_gestao: !!plano_gestao,
-        ticket_medio: ticket_medio === '' || ticket_medio === null ? null : Number(ticket_medio),
-        taxa_conversao_estimada: taxa_conversao_estimada === '' || taxa_conversao_estimada === null ? null : Number(taxa_conversao_estimada),
       })
       .eq('id', id)
     setSaving(false)
@@ -264,27 +235,14 @@ export default function ClienteDetalhe() {
             <span className={`badge-dot ${meta.dot}`} />
             {meta.label}
           </span>
-          <button
-            disabled
-            title="Sincronização automática com o Google Business Profile chega em breve"
-            className="btn-secondary flex items-center gap-2 opacity-60 cursor-not-allowed"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Sincronizar com Google
-          </button>
         </div>
       </div>
 
       <div className="flex items-start justify-between flex-wrap gap-3 mb-6">
         <div>
           <h1 className="font-display text-2xl font-bold text-night mb-1">{form.nome}</h1>
-          <p className="text-sm text-slate-500">{form.nicho || 'Sem nicho definido'} {form.cidade ? `· ${form.cidade}` : ''}</p>
+          <p className="text-sm text-slate-500">{form.nicho || 'Sem benefício definido'} {form.cidade ? `· ${form.cidade}` : ''}</p>
         </div>
-        <Link href={`/gestao/${id}`} className="btn-primary flex items-center gap-2 text-sm">
-          <Layers className="w-4 h-4" />
-          Ver Gestão deste cliente
-          <ExternalLink className="w-3.5 h-3.5" />
-        </Link>
       </div>
 
       <div className="flex gap-1 overflow-x-auto border-b border-slate-200 mb-6">
@@ -328,12 +286,10 @@ export default function ClienteDetalhe() {
                   <div key={key}>
                     <dt className="text-xs text-slate-400">{label}</dt>
                     <dd className="text-sm text-slate-700 font-medium">
-                      {key === 'plano_valor' || key === 'ticket_medio'
+                      {key === 'plano_valor'
                         ? formatCurrency(form[key])
                         : key === 'data_inicio_contrato' || key === 'data_fim_contrato'
                         ? formatDate(form[key])
-                        : key === 'taxa_conversao_estimada'
-                        ? (form[key] || form[key] === 0 ? `${form[key]}%` : '—')
                         : form[key] || '—'}
                     </dd>
                   </div>
@@ -342,16 +298,16 @@ export default function ClienteDetalhe() {
             ) : (
               <form onSubmit={handleSave} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Nome da empresa</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Nome do cliente</label>
                   <input required value={form.nome || ''} onChange={(e) => setForm({ ...form, nome: e.target.value })} className="input-field" />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">CNPJ</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">CPF</label>
                     <input value={form.cnpj || ''} onChange={(e) => setForm({ ...form, cnpj: e.target.value })} className="input-field" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Nicho</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de benefício</label>
                     <input value={form.nicho || ''} onChange={(e) => setForm({ ...form, nicho: e.target.value })} className="input-field" />
                   </div>
                 </div>
@@ -370,26 +326,26 @@ export default function ClienteDetalhe() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">E-mail comercial</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">E-mail</label>
                   <input type="email" value={form.email_comercial || ''} onChange={(e) => setForm({ ...form, email_comercial: e.target.value })} className="input-field" />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Nome do contato</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Nome de quem atende (se não for o cliente)</label>
                     <input value={form.contato_nome || ''} onChange={(e) => setForm({ ...form, contato_nome: e.target.value })} className="input-field" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">WhatsApp do contato</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">WhatsApp de contato</label>
                     <input value={form.contato_whatsapp || ''} onChange={(e) => setForm({ ...form, contato_whatsapp: e.target.value })} className="input-field" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">E-mail do contato</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">E-mail de contato</label>
                   <input type="email" value={form.contato_email || ''} onChange={(e) => setForm({ ...form, contato_email: e.target.value })} className="input-field" />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Valor do plano (R$)</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Valor dos honorários (R$)</label>
                     <input type="number" step="0.01" value={form.plano_valor ?? ''} onChange={(e) => setForm({ ...form, plano_valor: e.target.value })} className="input-field" />
                   </div>
                   <div>
@@ -407,66 +363,13 @@ export default function ClienteDetalhe() {
                     <input type="date" value={form.data_inicio_contrato || ''} onChange={(e) => setForm({ ...form, data_inicio_contrato: e.target.value })} className="input-field" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Dia de vencimento do plano</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Dia de vencimento da parcela</label>
                     <input type="number" min={1} max={31} value={form.dia_vencimento ?? ''} onChange={(e) => setForm({ ...form, dia_vencimento: e.target.value })} placeholder="Ex: 10" className="input-field" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Data de fim do contrato (opcional)</label>
                   <input type="date" value={form.data_fim_contrato || ''} onChange={(e) => setForm({ ...form, data_fim_contrato: e.target.value })} className="input-field" />
-                </div>
-                <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={!!form.plano_gestao}
-                    onChange={(e) => setForm({ ...form, plano_gestao: e.target.checked })}
-                  />
-                  Cliente do plano de Gestão (recebe a aba de datas especiais/feriados no portal dele)
-                </label>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">ID do Google Business Profile</label>
-                  <input value={form.google_business_id || ''} onChange={(e) => setForm({ ...form, google_business_id: e.target.value })} className="input-field" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Link direto de avaliação do Google (opcional)</label>
-                  <input
-                    type="url"
-                    value={form.link_avaliacao || ''}
-                    onChange={(e) => setForm({ ...form, link_avaliacao: e.target.value })}
-                    placeholder="https://g.page/r/.../review"
-                    className="input-field"
-                  />
-                  <p className="text-xs text-slate-400 mt-1">
-                    Pega esse link no app do Google Business Profile em "Receber mais avaliações". Com ele
-                    preenchido, o cliente vê o botão de QR Code no portal dele.
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Pasta do Google Drive (opcional)</label>
-                  <input
-                    type="url"
-                    value={form.link_pasta_drive || ''}
-                    onChange={(e) => setForm({ ...form, link_pasta_drive: e.target.value })}
-                    placeholder="https://drive.google.com/drive/folders/..."
-                    className="input-field"
-                  />
-                  <p className="text-xs text-slate-400 mt-1">
-                    Cola o link da pasta desse cliente/caso no Drive. Com isso a Maia consegue listar e ler os
-                    arquivos dessa pasta quando você pedir na conversa (precisa ter conectado o Google em
-                    Configurações).
-                  </p>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Ticket médio do cliente (R$)</label>
-                    <input type="number" step="0.01" value={form.ticket_medio ?? ''} onChange={(e) => setForm({ ...form, ticket_medio: e.target.value })} placeholder="Ex: 150" className="input-field" />
-                    <p className="text-xs text-slate-400 mt-1">Usado na calculadora de ROI do relatório avançado.</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Taxa de conversão estimada (%)</label>
-                    <input type="number" step="0.1" min={0} max={100} value={form.taxa_conversao_estimada ?? ''} onChange={(e) => setForm({ ...form, taxa_conversao_estimada: e.target.value })} placeholder="Ex: 20" className="input-field" />
-                    <p className="text-xs text-slate-400 mt-1">% das ligações/rotas/cliques que viram cliente de verdade.</p>
-                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Observações gerais</label>
@@ -491,11 +394,42 @@ export default function ClienteDetalhe() {
             <p className="text-sm text-slate-600 whitespace-pre-wrap">{form.notas || 'Nenhuma observação registrada.'}</p>
           </div>
 
+          <div className="card space-y-3">
+            <div className="flex items-center gap-2">
+              <FolderOpen className="w-5 h-5 text-primary-800" />
+              <h2 className="font-display font-semibold text-night">Pasta do Google Drive</h2>
+            </div>
+            <p className="text-xs text-slate-400">
+              Cola aqui o link da pasta desse caso no Drive (ou de uma subpasta específica dentro da pasta de
+              clientes). Com isso a APREV Digital consegue listar e ler os arquivos dessa pasta (e das subpastas
+              dela) quando você pedir na conversa - precisa ter conectado o Google em Configurações antes.
+            </p>
+            <form onSubmit={handleSaveDrivePasta} className="flex flex-wrap items-center gap-3">
+              <input
+                type="url"
+                value={form.link_pasta_drive || ''}
+                onChange={(e) => setForm({ ...form, link_pasta_drive: e.target.value })}
+                placeholder="https://drive.google.com/drive/folders/..."
+                className="input-field flex-1 min-w-[240px]"
+              />
+              <button type="submit" disabled={savingDrive} className="btn-primary flex items-center gap-2 text-sm">
+                {savingDrive ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Salvar
+              </button>
+              {form.link_pasta_drive && (
+                <a href={form.link_pasta_drive} target="_blank" rel="noreferrer" className="btn-secondary flex items-center gap-2 text-sm">
+                  <ExternalLink className="w-4 h-4" />
+                  Abrir no Drive
+                </a>
+              )}
+            </form>
+          </div>
+
           <div className="card">
             <h2 className="font-display font-semibold text-night mb-1">Acesso do cliente ao portal</h2>
             <p className="text-xs text-slate-400 mb-4">
-              Dá pra esse cliente ver métricas, avaliações, fotos e relatórios num portal só dele, sem acesso ao
-              resto do seu painel.
+              Dá pra esse cliente acompanhar o andamento do processo, datas e documentos do caso dele num portal
+              só dele, sem acesso ao resto do seu painel.
             </p>
 
             {clienteAcesso ? (
@@ -537,75 +471,6 @@ export default function ClienteDetalhe() {
               <Trash2 className="w-4 h-4" />
               Excluir cliente permanentemente
             </button>
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'onboarding' && (
-        <div className="space-y-6">
-          <div className="card">
-            <h2 className="font-display font-semibold text-night mb-1">Formulários de onboarding</h2>
-            <p className="text-xs text-slate-400 mb-4">
-              Manda o link certo pro cliente preencher as informações que precisamos pra criar ou otimizar o
-              perfil dele no Google Maps. A resposta cai aqui embaixo assim que ele enviar.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <a
-                href={buildOnboardingWaLink(form, id, 'criacao')}
-                target="_blank"
-                rel="noreferrer"
-                className="btn-secondary flex items-center gap-2 text-sm"
-              >
-                <Send className="w-4 h-4" />
-                Enviar formulário de Criação
-              </a>
-              <a
-                href={buildOnboardingWaLink(form, id, 'otimizacao')}
-                target="_blank"
-                rel="noreferrer"
-                className="btn-secondary flex items-center gap-2 text-sm"
-              >
-                <Send className="w-4 h-4" />
-                Enviar formulário de Otimização
-              </a>
-            </div>
-          </div>
-
-          <div className="card">
-            <h2 className="font-display font-semibold text-night mb-4">Respostas recebidas</h2>
-            {onboardingSubmissions.length === 0 ? (
-              <p className="text-sm text-slate-400">Nenhuma resposta recebida ainda.</p>
-            ) : (
-              <ul className="divide-y divide-slate-100">
-                {onboardingSubmissions.map((s) => {
-                  const aberto = onboardingAberto === s.id
-                  return (
-                    <li key={s.id} className="py-3">
-                      <button
-                        onClick={() => setOnboardingAberto(aberto ? null : s.id)}
-                        className="flex w-full items-center justify-between gap-4 text-left"
-                      >
-                        <div>
-                          <p className="text-sm font-medium text-slate-700">{ONBOARDING_LABELS[s.tipo] || s.tipo}</p>
-                          <p className="text-xs text-slate-400">{formatDateTime(s.created_at)}</p>
-                        </div>
-                        <span className="text-sm text-primary-800 font-medium">{aberto ? 'Fechar' : 'Ver respostas'}</span>
-                      </button>
-                      {aberto && (
-                        <dl className="mt-3 space-y-2.5 rounded-lg bg-slate-50 p-4">
-                          {Object.entries(s.dados || {}).map(([key, value]) => (
-                            <div key={key}>
-                              <dt className="text-xs text-slate-400">{onboardingFieldLabel(s.tipo, key)}</dt>
-                              <dd className="text-sm text-slate-700 font-medium whitespace-pre-wrap">{value || '—'}</dd>
-                            </div>
-                          ))}
-                        </dl>
-                      )}
-                    </li>
-                  )
-                })}
-              </ul>
-            )}
           </div>
         </div>
       )}
