@@ -275,6 +275,43 @@ export default function Conversas() {
     setConversas((prev) => prev.map((c) => (c.id === conversaSelecionada.id ? { ...c, status } : c)))
   }
 
+  // Categoria manual (Lead/Cliente/Sem categoria). Se ainda não existe um
+  // lead ou caso vinculado a essa conversa, cria um mínimo na hora - assim
+  // já aparece também no Funil de Leads ou em Casos, não é só uma etiqueta.
+  async function atualizarCategoria(tipo) {
+    if (!conversaSelecionada || !contexto?.donoUserId) return
+    const nome = conversaSelecionada.nome_contato || conversaSelecionada.telefone
+    let atualizacao = { lead_id: null, cliente_id: null }
+
+    if (tipo === 'lead') {
+      let leadId = conversaSelecionada.lead_id
+      if (!leadId) {
+        const { data } = await supabase
+          .from('leads')
+          .insert({ user_id: contexto.donoUserId, nome, telefone: conversaSelecionada.telefone, origem: 'painel', status: 'novo' })
+          .select('id')
+          .single()
+        leadId = data?.id || null
+      }
+      atualizacao = { lead_id: leadId, cliente_id: null }
+    } else if (tipo === 'cliente') {
+      let clienteId = conversaSelecionada.cliente_id
+      if (!clienteId) {
+        const { data } = await supabase
+          .from('clientes')
+          .insert({ user_id: contexto.donoUserId, nome, contato_whatsapp: conversaSelecionada.telefone, status: 'ativo' })
+          .select('id')
+          .single()
+        clienteId = data?.id || null
+      }
+      atualizacao = { lead_id: null, cliente_id: clienteId }
+    }
+
+    await supabase.from('conversas_whatsapp').update(atualizacao).eq('id', conversaSelecionada.id)
+    setConversaSelecionada((prev) => ({ ...prev, ...atualizacao }))
+    setConversas((prev) => prev.map((c) => (c.id === conversaSelecionada.id ? { ...c, ...atualizacao } : c)))
+  }
+
   async function handleNovaConversa(e) {
     e.preventDefault()
     if (!novaConversa.telefone.trim() || !contexto?.donoUserId) return
@@ -427,17 +464,28 @@ export default function Conversas() {
                     <Phone className="w-3 h-3" /> {conversaSelecionada.telefone}
                   </p>
                 </div>
-                <select
-                  value={conversaSelecionada.status}
-                  onChange={(e) => atualizarStatusConversa(e.target.value)}
-                  className="input-field text-sm w-auto"
-                >
-                  {Object.entries(STATUS_META).map(([value, meta]) => (
-                    <option key={value} value={value}>
-                      {meta.label}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={conversaSelecionada.cliente_id ? 'cliente' : conversaSelecionada.lead_id ? 'lead' : 'nenhum'}
+                    onChange={(e) => atualizarCategoria(e.target.value)}
+                    className="input-field text-sm w-auto"
+                  >
+                    <option value="nenhum">Sem categoria</option>
+                    <option value="lead">Lead</option>
+                    <option value="cliente">Cliente</option>
+                  </select>
+                  <select
+                    value={conversaSelecionada.status}
+                    onChange={(e) => atualizarStatusConversa(e.target.value)}
+                    className="input-field text-sm w-auto"
+                  >
+                    {Object.entries(STATUS_META).map(([value, meta]) => (
+                      <option key={value} value={value}>
+                        {meta.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
