@@ -87,9 +87,11 @@ export default function Configuracoes() {
 
   useEffect(() => {
     if (!router.isReady) return
-    const { google } = router.query
+    const { google, motivo } = router.query
     if (google === 'conectado') showFeedback('Conta Google conectada com sucesso!')
-    if (google === 'erro') showFeedback('Não foi possível conectar com o Google. Tente novamente.')
+    if (google === 'erro') {
+      showFeedback(`Não foi possível conectar com o Google. Tente novamente.${motivo ? ` (motivo: ${motivo})` : ''}`)
+    }
     if (google) router.replace('/configuracoes', undefined, { shallow: true })
   }, [router.isReady, router.query])
 
