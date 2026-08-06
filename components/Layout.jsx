@@ -20,6 +20,7 @@ import {
   MessageCircle,
   BookOpen,
   Sparkles,
+  Library,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import Logo from './Logo'
@@ -38,6 +39,7 @@ const NAV_ITEMS = [
   { href: '/digital', label: 'Central do Digital', icon: Sparkles },
   { href: '/automacoes', label: 'Automações', icon: Zap },
   { href: '/base-conhecimento', label: 'Base de Conhecimento IA', icon: BookOpen, roles: ['secretaria'] },
+  { href: '/biblioteca-ia', label: 'Biblioteca Jurídica IA', icon: Library, roles: ['secretaria'] },
   { href: '/configuracoes', label: 'Configurações', icon: Settings },
 ]
 
