@@ -95,9 +95,25 @@ export default async function handler(req, res) {
   }
 
   if (!conversa) {
+    // Tenta já nascer vinculada a um caso (cliente) ou lead existente pelo
+    // telefone - cliente tem prioridade (se virou cliente, o lead antigo já
+    // cumpriu seu papel). Isso é o que alimenta o filtro Leads/Clientes na
+    // tela de Conversas.
+    const [{ data: clienteMatch }, { data: leadMatch }] = await Promise.all([
+      supabaseAdmin.from('clientes').select('id').eq('user_id', dono.id).eq('contato_whatsapp', telefone).maybeSingle(),
+      supabaseAdmin.from('leads').select('id').eq('user_id', dono.id).eq('telefone', telefone).maybeSingle(),
+    ])
+
     const { data: novaConversa, error: erroConversa } = await supabaseAdmin
       .from('conversas_whatsapp')
-      .insert({ user_id: dono.id, telefone, nome_contato: nomeContato, status: 'aberta' })
+      .insert({
+        user_id: dono.id,
+        telefone,
+        nome_contato: nomeContato,
+        status: 'aberta',
+        cliente_id: clienteMatch?.id || null,
+        lead_id: !clienteMatch && leadMatch ? leadMatch.id : null,
+      })
       .select('id, nao_lidas')
       .single()
     if (erroConversa) {
