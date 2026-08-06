@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
-import { Send, Loader2, ShieldAlert, Paperclip, X, FileText, Plus, MessageCircle } from 'lucide-react'
+import { Send, Loader2, ShieldAlert, Paperclip, X, FileText, Plus, MessageCircle, Trash2 } from 'lucide-react'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
 import Layout from '../components/Layout'
@@ -71,8 +71,13 @@ function ChatPanel({ conversaInicialId, mensagensIniciais, donoUserId, onConvers
   const [input, setInput] = useState('')
   const [arquivos, setArquivos] = useState([])
   const bottomRef = useRef(null)
+  const listaRef = useRef(null)
   const fileInputRef = useRef(null)
   const conversaIdRef = useRef(conversaInicialId)
+  // Só rola pro fim sozinho se o usuário já estava perto do fim - assim dá
+  // pra rolar pra cima e ler o histórico enquanto a resposta ainda está
+  // sendo gerada, sem ser puxado de volta pra baixo a cada pedaço de texto.
+  const coladoNoFimRef = useRef(true)
 
   const transport = useMemo(
     () =>
@@ -100,8 +105,17 @@ function ChatPanel({ conversaInicialId, mensagensIniciais, donoUserId, onConvers
   const enviando = status === 'submitted' || status === 'streaming'
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (coladoNoFimRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
   }, [messages])
+
+  function handleScrollLista() {
+    const el = listaRef.current
+    if (!el) return
+    const distanciaDoFim = el.scrollHeight - el.scrollTop - el.clientHeight
+    coladoNoFimRef.current = distanciaDoFim < 80
+  }
 
   function adicionarArquivos(e) {
     const novos = Array.from(e.target.files || [])
@@ -136,6 +150,7 @@ function ChatPanel({ conversaInicialId, mensagensIniciais, donoUserId, onConvers
     }
 
     const files = arquivos.length ? await Promise.all(arquivos.map(arquivoParaFileUIPart)) : undefined
+    coladoNoFimRef.current = true
     sendMessage(texto ? { text: texto, files } : { files })
     setInput('')
     setArquivos([])
@@ -143,7 +158,7 @@ function ChatPanel({ conversaInicialId, mensagensIniciais, donoUserId, onConvers
 
   return (
     <>
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div ref={listaRef} onScroll={handleScrollLista} className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.length === 0 ? (
           <p className="text-center text-sm text-slate-400 py-10">
             Descreva o que você precisa resolver e a APREV Digital monta a equipe.
@@ -314,6 +329,18 @@ export default function Maia() {
     setConversaSelecionada(novaLinha)
   }
 
+  async function handleExcluirConversa(conversa, e) {
+    e.stopPropagation()
+    if (!confirm(`Excluir a conversa "${conversa.titulo || 'sem título'}"? As mensagens dela também somem.`)) return
+    // mensagens_maia tem "on delete cascade" pra conversa_id, então excluir
+    // a conversa já leva as mensagens junto.
+    await supabase.from('conversas_maia').delete().eq('id', conversa.id)
+    setConversas((prev) => prev.filter((c) => c.id !== conversa.id))
+    if (conversaSelecionada?.id === conversa.id) {
+      novaConversa()
+    }
+  }
+
   if (loading) {
     return (
       <Layout title="APREV Digital">
@@ -350,15 +377,28 @@ export default function Maia() {
               </div>
             ) : (
               conversas.map((c) => (
-                <button
+                <div
                   key={c.id}
-                  onClick={() => selecionarConversa(c)}
-                  className={`w-full text-left px-3 py-2.5 border-b border-slate-50 hover:bg-primary-50/50 text-sm truncate transition-colors ${
-                    conversaSelecionada?.id === c.id ? 'bg-primary-50 text-primary-800 font-medium' : 'text-slate-600'
+                  className={`group flex items-center border-b border-slate-50 hover:bg-primary-50/50 transition-colors ${
+                    conversaSelecionada?.id === c.id ? 'bg-primary-50' : ''
                   }`}
                 >
-                  {c.titulo || 'Conversa sem título'}
-                </button>
+                  <button
+                    onClick={() => selecionarConversa(c)}
+                    className={`flex-1 min-w-0 text-left px-3 py-2.5 text-sm truncate ${
+                      conversaSelecionada?.id === c.id ? 'text-primary-800 font-medium' : 'text-slate-600'
+                    }`}
+                  >
+                    {c.titulo || 'Conversa sem título'}
+                  </button>
+                  <button
+                    onClick={(e) => handleExcluirConversa(c, e)}
+                    title="Excluir conversa"
+                    className="p-1.5 mr-2 text-slate-300 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               ))
             )}
           </div>
