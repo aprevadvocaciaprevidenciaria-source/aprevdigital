@@ -72,7 +72,7 @@ export default async function handler(req, res) {
     const result = streamText({
       model: anthropic('claude-sonnet-5'),
       system: SYSTEM_PROMPT,
-      messages: convertToModelMessages(messages.slice(-20)),
+      messages: await convertToModelMessages(messages.slice(-20)),
     })
     await result.pipeUIMessageStreamToResponse(res)
   } catch (err) {
