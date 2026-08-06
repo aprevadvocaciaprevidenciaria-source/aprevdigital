@@ -21,6 +21,7 @@ import {
   BookOpen,
   Sparkles,
   Library,
+  Bot,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import Logo from './Logo'
@@ -40,6 +41,7 @@ const NAV_ITEMS = [
   { href: '/automacoes', label: 'Automações', icon: Zap },
   { href: '/base-conhecimento', label: 'Base de Conhecimento IA', icon: BookOpen, roles: ['secretaria'] },
   { href: '/biblioteca-ia', label: 'Biblioteca Jurídica IA', icon: Library, roles: ['secretaria'] },
+  { href: '/maia', label: 'Assistente Maia', icon: Bot, roles: ['secretaria'] },
   { href: '/configuracoes', label: 'Configurações', icon: Settings },
 ]
 
