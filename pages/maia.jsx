@@ -146,7 +146,7 @@ function ChatPanel({ conversaInicialId, mensagensIniciais, donoUserId, onConvers
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.length === 0 ? (
           <p className="text-center text-sm text-slate-400 py-10">
-            Descreva o que você precisa resolver e a Maia monta a equipe.
+            Descreva o que você precisa resolver e a APREV Digital monta a equipe.
           </p>
         ) : (
           messages.map((m) => (
@@ -203,7 +203,7 @@ function ChatPanel({ conversaInicialId, mensagensIniciais, donoUserId, onConvers
 
       {error && (
         <div className="mx-4 mb-2 px-3 py-2 rounded-lg bg-red-50 text-red-700 text-xs border border-red-200">
-          {error.message || 'Falha ao falar com a Maia. Tente novamente.'}
+          {error.message || 'Falha ao falar com a APREV Digital. Tente novamente.'}
         </div>
       )}
 
@@ -316,7 +316,7 @@ export default function Maia() {
 
   if (loading) {
     return (
-      <Layout title="Assistente Maia">
+      <Layout title="APREV Digital">
         <div className="flex items-center justify-center py-24">
           <Loader2 className="w-8 h-8 text-primary-800 animate-spin" />
         </div>
@@ -325,7 +325,7 @@ export default function Maia() {
   }
 
   return (
-    <Layout title="Assistente Maia">
+    <Layout title="APREV Digital">
       <div className="card mb-4 bg-amber-50 border-amber-200 flex items-start gap-3">
         <ShieldAlert className="w-5 h-5 text-amber-700 flex-shrink-0 mt-0.5" />
         <p className="text-sm text-amber-800">
