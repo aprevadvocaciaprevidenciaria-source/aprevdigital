@@ -309,7 +309,7 @@ export default function Configuracoes() {
         <div className="card space-y-3">
           <div className="flex items-center gap-2">
             <MapPin className="w-5 h-5 text-primary-800" />
-            <h2 className="font-display font-semibold text-night">Integração com Google Business Profile</h2>
+            <h2 className="font-display font-semibold text-night">Integração com Google (Business Profile + Drive)</h2>
           </div>
 
           {googleStatus.conectado ? (
@@ -319,7 +319,8 @@ export default function Configuracoes() {
               </p>
               <p className="text-xs text-slate-400">
                 A sincronização automática de métricas e avaliações ainda está sendo finalizada — por enquanto os
-                dados continuam sendo lançados manualmente.
+                dados continuam sendo lançados manualmente. O acesso ao Google Drive (pra Maia ler arquivos de
+                clientes) já está ativo com essa conexão.
               </p>
               <button onClick={handleDesconectarGoogle} className="btn-secondary flex items-center gap-2 text-sm">
                 <Unlink className="w-4 h-4" />
@@ -329,7 +330,8 @@ export default function Configuracoes() {
           ) : (
             <>
               <p className="text-sm text-slate-500">
-                Conecte a conta Google da agência pra sincronizar métricas e avaliações automaticamente. Cada
+                Conecte a conta Google do escritório pra: sincronizar métricas/avaliações do Google Business Profile,
+                e liberar a Maia pra ler arquivos do Google Drive vinculados aos clientes (aba Assistente Maia). Cada
                 cliente precisa te dar acesso de "Gerente" no Google Business Profile dele antes de sincronizar.
               </p>
               <button
