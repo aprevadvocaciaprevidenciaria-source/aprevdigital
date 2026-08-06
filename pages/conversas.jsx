@@ -64,6 +64,7 @@ export default function Conversas() {
   const [erroEnvio, setErroEnvio] = useState('')
   const [gerandoSugestao, setGerandoSugestao] = useState(false)
   const [erroSugestao, setErroSugestao] = useState('')
+  const [filtro, setFiltro] = useState('todos')
   const [mostrarForm, setMostrarForm] = useState(false)
   const [novaConversa, setNovaConversa] = useState(EMPTY_CONVERSA)
   const [salvandoConversa, setSalvandoConversa] = useState(false)
@@ -299,6 +300,12 @@ export default function Conversas() {
     }
   }
 
+  const conversasFiltradas = conversas.filter((c) => {
+    if (filtro === 'leads') return !!c.lead_id
+    if (filtro === 'clientes') return !!c.cliente_id
+    return true
+  })
+
   if (loading) {
     return (
       <Layout title="Conversas WhatsApp">
@@ -319,6 +326,24 @@ export default function Conversas() {
             <button onClick={() => setMostrarForm((v) => !v)} className="p-1.5 text-primary-800 hover:bg-primary-50 rounded-lg">
               <Plus className="w-4 h-4" />
             </button>
+          </div>
+
+          <div className="flex items-center gap-1 px-3 py-2 border-b border-slate-100 text-xs">
+            {[
+              { valor: 'todos', label: 'Todos' },
+              { valor: 'leads', label: 'Leads' },
+              { valor: 'clientes', label: 'Clientes' },
+            ].map((op) => (
+              <button
+                key={op.valor}
+                onClick={() => setFiltro(op.valor)}
+                className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
+                  filtro === op.valor ? 'bg-primary-800 text-white' : 'text-slate-500 hover:bg-slate-100'
+                }`}
+              >
+                {op.label}
+              </button>
+            ))}
           </div>
 
           {mostrarForm && (
@@ -344,13 +369,15 @@ export default function Conversas() {
           )}
 
           <div className="flex-1 overflow-y-auto">
-            {conversas.length === 0 ? (
+            {conversasFiltradas.length === 0 ? (
               <div className="p-6 text-center text-sm text-slate-400">
                 <MessageCircle className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-                Nenhuma conversa ainda. Assim que o WhatsApp da APREV for conectado (Z-API), as conversas caem aqui automaticamente.
+                {filtro === 'todos'
+                  ? 'Nenhuma conversa ainda. Assim que o WhatsApp da APREV for conectado (Z-API), as conversas caem aqui automaticamente.'
+                  : `Nenhuma conversa de ${filtro === 'leads' ? 'lead' : 'cliente'} ainda.`}
               </div>
             ) : (
-              conversas.map((c) => {
+              conversasFiltradas.map((c) => {
                 const meta = STATUS_META[c.status] || STATUS_META.aberta
                 const ativa = conversaSelecionada?.id === c.id
                 return (
@@ -370,7 +397,14 @@ export default function Conversas() {
                       )}
                     </div>
                     <p className="text-xs text-slate-400 truncate mt-0.5">{c.ultima_mensagem_preview || c.telefone}</p>
-                    <span className={`badge ${meta.badge} mt-1.5`}>{meta.label}</span>
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <span className={`badge ${meta.badge}`}>{meta.label}</span>
+                      {c.cliente_id ? (
+                        <span className="badge bg-primary-100 text-primary-800">Cliente</span>
+                      ) : c.lead_id ? (
+                        <span className="badge bg-purple-100 text-purple-700">Lead</span>
+                      ) : null}
+                    </div>
                   </button>
                 )
               })
