@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
-import { Loader2, Plus, Send, Sparkles, Phone, X, MessageCircle, FileText, Download } from 'lucide-react'
+import { Loader2, Plus, Send, Sparkles, Phone, X, MessageCircle, FileText, Download, Mic } from 'lucide-react'
 import Layout from '../components/Layout'
 import { supabase } from '../lib/supabase'
 import { resolveEquipeContext } from '../lib/session'
@@ -68,6 +68,7 @@ export default function Conversas() {
   const [mostrarForm, setMostrarForm] = useState(false)
   const [novaConversa, setNovaConversa] = useState(EMPTY_CONVERSA)
   const [salvandoConversa, setSalvandoConversa] = useState(false)
+  const [transcrevendoId, setTranscrevendoId] = useState(null)
   const bottomRef = useRef(null)
   const conversaSelecionadaRef = useRef(null)
 
@@ -266,6 +267,28 @@ export default function Conversas() {
       setErroSugestao(data?.error || 'Falha ao gerar sugestão.')
     }
     setGerandoSugestao(false)
+  }
+
+  async function transcreverAudio(mensagemId) {
+    if (transcrevendoId) return
+    setTranscrevendoId(mensagemId)
+
+    const { data: sessionData } = await supabase.auth.getSession()
+    const token = sessionData?.session?.access_token
+
+    const resp = await fetch('/api/conversas/transcrever', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ mensagemId }),
+    })
+    const data = await resp.json().catch(() => ({}))
+
+    if (resp.ok) {
+      setMensagens((prev) => prev.map((m) => (m.id === mensagemId ? { ...m, texto: data.texto } : m)))
+    } else {
+      alert(data?.error || 'Falha ao transcrever o áudio.')
+    }
+    setTranscrevendoId(null)
   }
 
   async function atualizarStatusConversa(status) {
@@ -504,6 +527,22 @@ export default function Conversas() {
                         }`}
                       >
                         {m.midia_url && <MensagemMidia url={m.midia_url} />}
+                        {m.midia_url && !m.texto && EXT_AUDIO.includes(extensaoDe(m.midia_url)) && (
+                          <button
+                            onClick={() => transcreverAudio(m.id)}
+                            disabled={transcrevendoId === m.id}
+                            className={`flex items-center gap-1.5 text-xs underline mb-1 ${
+                              m.direcao === 'enviada' ? 'text-primary-100' : 'text-primary-800'
+                            }`}
+                          >
+                            {transcrevendoId === m.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Mic className="w-3 h-3" />
+                            )}
+                            {transcrevendoId === m.id ? 'Transcrevendo...' : 'Transcrever áudio'}
+                          </button>
+                        )}
                         {m.texto && <p className="whitespace-pre-wrap">{m.texto}</p>}
                         <p className={`text-[10px] mt-1 ${m.direcao === 'enviada' ? 'text-primary-200' : 'text-slate-400'}`}>
                           {formatDateTime(m.enviado_em)}
