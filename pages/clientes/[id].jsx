@@ -79,6 +79,7 @@ const FIELD_LABELS = {
   dia_vencimento: 'Dia de vencimento da parcela',
   google_business_id: 'ID do Google Business Profile',
   link_avaliacao: 'Link de avaliação do Google',
+  link_pasta_drive: 'Pasta do Google Drive',
   ticket_medio: 'Ticket médio do cliente',
   taxa_conversao_estimada: 'Taxa de conversão estimada',
 }
@@ -172,7 +173,7 @@ export default function ClienteDetalhe() {
       nome, cnpj, endereco, cidade, telefone, email_comercial,
       contato_nome, contato_whatsapp, contato_email, nicho, plano_valor,
       status, data_inicio_contrato, data_fim_contrato, dia_vencimento, notas, google_business_id, link_avaliacao,
-      ticket_medio, taxa_conversao_estimada, plano_gestao,
+      link_pasta_drive, ticket_medio, taxa_conversao_estimada, plano_gestao,
     } = form
     await supabase
       .from('clientes')
@@ -187,6 +188,7 @@ export default function ClienteDetalhe() {
         notas,
         google_business_id,
         link_avaliacao: link_avaliacao || null,
+        link_pasta_drive: link_pasta_drive || null,
         plano_gestao: !!plano_gestao,
         ticket_medio: ticket_medio === '' || ticket_medio === null ? null : Number(ticket_medio),
         taxa_conversao_estimada: taxa_conversao_estimada === '' || taxa_conversao_estimada === null ? null : Number(taxa_conversao_estimada),
@@ -437,6 +439,21 @@ export default function ClienteDetalhe() {
                   <p className="text-xs text-slate-400 mt-1">
                     Pega esse link no app do Google Business Profile em "Receber mais avaliações". Com ele
                     preenchido, o cliente vê o botão de QR Code no portal dele.
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Pasta do Google Drive (opcional)</label>
+                  <input
+                    type="url"
+                    value={form.link_pasta_drive || ''}
+                    onChange={(e) => setForm({ ...form, link_pasta_drive: e.target.value })}
+                    placeholder="https://drive.google.com/drive/folders/..."
+                    className="input-field"
+                  />
+                  <p className="text-xs text-slate-400 mt-1">
+                    Cola o link da pasta desse cliente/caso no Drive. Com isso a Maia consegue listar e ler os
+                    arquivos dessa pasta quando você pedir na conversa (precisa ter conectado o Google em
+                    Configurações).
                   </p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

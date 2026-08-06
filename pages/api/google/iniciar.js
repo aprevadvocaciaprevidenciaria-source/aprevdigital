@@ -1,7 +1,10 @@
 import crypto from 'crypto'
 import { createClient } from '@supabase/supabase-js'
 
-const SCOPE = 'https://www.googleapis.com/auth/business.manage'
+// drive.readonly é escopo "sensível" pro Google - se a tela de consentimento
+// OAuth do projeto ainda estiver em modo "Testing" (não publicada), funciona
+// normal, só mostra aviso de "app não verificado" no consentimento.
+const SCOPE = 'https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/drive.readonly'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
