@@ -11,12 +11,15 @@ export default async function handler(req, res) {
   const clientId = process.env.GOOGLE_CLIENT_ID
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET
 
-  if (googleError || !code || !state) {
-    return res.redirect('/configuracoes?google=erro')
+  // motivo curto anexado no redirect de erro, só pra dar sinal de em qual
+  // etapa falhou sem expor segredo nenhum na URL - mostrado em configuracoes.jsx.
+  function redirecionarErro(motivo) {
+    return res.redirect(`/configuracoes?google=erro&motivo=${encodeURIComponent(motivo)}`)
   }
-  if (!serviceRoleKey || !clientId || !clientSecret) {
-    return res.redirect('/configuracoes?google=erro')
-  }
+
+  if (googleError) return redirecionarErro(`google:${googleError}`)
+  if (!code || !state) return redirecionarErro('parametros-faltando')
+  if (!serviceRoleKey || !clientId || !clientSecret) return redirecionarErro('env-servidor')
 
   const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -29,13 +32,13 @@ export default async function handler(req, res) {
     .maybeSingle()
 
   if (!stateRow) {
-    return res.redirect('/configuracoes?google=erro')
+    return redirecionarErro('state-nao-encontrado')
   }
   await supabaseAdmin.from('google_oauth_state').delete().eq('state', state)
 
   const expirado = Date.now() - new Date(stateRow.created_at).getTime() > 10 * 60 * 1000
   if (expirado) {
-    return res.redirect('/configuracoes?google=erro')
+    return redirecionarErro('state-expirado')
   }
 
   const origin = req.headers.origin || `https://${req.headers.host}`
@@ -55,7 +58,7 @@ export default async function handler(req, res) {
   const tokenData = await tokenRes.json()
 
   if (!tokenRes.ok) {
-    return res.redirect('/configuracoes?google=erro')
+    return redirecionarErro(`token:${tokenData.error || tokenRes.status}`)
   }
 
   const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
@@ -72,7 +75,7 @@ export default async function handler(req, res) {
     .eq('user_id', stateRow.user_id)
     .maybeSingle()
 
-  await supabaseAdmin.from('google_oauth_tokens').upsert({
+  const { error: upsertError } = await supabaseAdmin.from('google_oauth_tokens').upsert({
     user_id: stateRow.user_id,
     email_google: userInfo.email || null,
     access_token: tokenData.access_token,
@@ -82,6 +85,10 @@ export default async function handler(req, res) {
     status: 'conectado',
     atualizado_em: new Date().toISOString(),
   })
+
+  if (upsertError) {
+    return redirecionarErro(`upsert:${upsertError.code || upsertError.message}`)
+  }
 
   return res.redirect('/configuracoes?google=conectado')
 }
