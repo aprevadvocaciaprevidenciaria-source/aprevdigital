@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
-import { Loader2, Plus, Send, Sparkles, Phone, X, MessageCircle, FileText, Download, Mic } from 'lucide-react'
+import { Loader2, Plus, Send, Sparkles, Phone, X, MessageCircle, FileText, Download, Mic, FolderOpen, Folder, ExternalLink } from 'lucide-react'
 import Layout from '../components/Layout'
 import { supabase } from '../lib/supabase'
 import { resolveEquipeContext } from '../lib/session'
@@ -69,6 +69,11 @@ export default function Conversas() {
   const [novaConversa, setNovaConversa] = useState(EMPTY_CONVERSA)
   const [salvandoConversa, setSalvandoConversa] = useState(false)
   const [transcrevendoId, setTranscrevendoId] = useState(null)
+  const [mostrarDrive, setMostrarDrive] = useState(false)
+  const [driveLoading, setDriveLoading] = useState(false)
+  const [driveErro, setDriveErro] = useState('')
+  const [driveItens, setDriveItens] = useState([])
+  const [driveBreadcrumb, setDriveBreadcrumb] = useState([]) // [{id, nome}], vazio = raiz
   const bottomRef = useRef(null)
   const conversaSelecionadaRef = useRef(null)
 
@@ -168,6 +173,10 @@ export default function Conversas() {
   async function abrirConversa(conversa) {
     setConversaSelecionada(conversa)
     setResposta('')
+    setMostrarDrive(false)
+    setDriveBreadcrumb([])
+    setDriveItens([])
+    setDriveErro('')
     setCarregandoThread(true)
     const [{ data: msgs }, { data: sug }] = await Promise.all([
       supabase
@@ -289,6 +298,48 @@ export default function Conversas() {
       alert(data?.error || 'Falha ao transcrever o áudio.')
     }
     setTranscrevendoId(null)
+  }
+
+  async function carregarPastaDrive(pastaId, cliente_id) {
+    setDriveLoading(true)
+    setDriveErro('')
+    const { data: sessionData } = await supabase.auth.getSession()
+    const token = sessionData?.session?.access_token
+    const params = new URLSearchParams({ clienteId: cliente_id })
+    if (pastaId) params.set('pastaId', pastaId)
+    const resp = await fetch(`/api/clientes/drive?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    const data = await resp.json().catch(() => ({}))
+    if (resp.ok) {
+      setDriveItens(data.itens || [])
+    } else {
+      setDriveErro(data?.error || 'Falha ao carregar os arquivos do Drive.')
+      setDriveItens([])
+    }
+    setDriveLoading(false)
+  }
+
+  function toggleDrive() {
+    const abrindo = !mostrarDrive
+    setMostrarDrive(abrindo)
+    if (abrindo && conversaSelecionada?.cliente_id) {
+      setDriveBreadcrumb([])
+      carregarPastaDrive(null, conversaSelecionada.cliente_id)
+    }
+  }
+
+  function abrirPastaDrive(pasta) {
+    setDriveBreadcrumb((prev) => [...prev, pasta])
+    carregarPastaDrive(pasta.id, conversaSelecionada.cliente_id)
+  }
+
+  function voltarPastaDrive(indice) {
+    // indice -1 = raiz
+    const novoBreadcrumb = indice < 0 ? [] : driveBreadcrumb.slice(0, indice + 1)
+    setDriveBreadcrumb(novoBreadcrumb)
+    const pastaId = novoBreadcrumb.length > 0 ? novoBreadcrumb[novoBreadcrumb.length - 1].id : null
+    carregarPastaDrive(pastaId, conversaSelecionada.cliente_id)
   }
 
   async function atualizarStatusConversa(status) {
@@ -488,6 +539,18 @@ export default function Conversas() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
+                  {conversaSelecionada.cliente_id && (
+                    <button
+                      onClick={toggleDrive}
+                      className={`flex items-center gap-1.5 text-sm px-2.5 py-1.5 rounded-lg border ${
+                        mostrarDrive ? 'bg-primary-50 text-primary-800 border-primary-200' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                      title="Documentos do cliente no Drive"
+                    >
+                      <FolderOpen className="w-4 h-4" />
+                      Documentos
+                    </button>
+                  )}
                   <select
                     value={conversaSelecionada.cliente_id ? 'cliente' : conversaSelecionada.lead_id ? 'lead' : 'nenhum'}
                     onChange={(e) => atualizarCategoria(e.target.value)}
@@ -510,6 +573,67 @@ export default function Conversas() {
                   </select>
                 </div>
               </div>
+
+              {mostrarDrive && (
+                <div className="border-b border-slate-100 p-3 bg-slate-50/60 max-h-56 overflow-y-auto">
+                  <div className="flex items-center gap-1 text-xs text-slate-500 mb-2 flex-wrap">
+                    <button
+                      onClick={() => voltarPastaDrive(-1)}
+                      className={`hover:text-primary-800 ${driveBreadcrumb.length === 0 ? 'font-semibold text-primary-800' : ''}`}
+                    >
+                      Raiz
+                    </button>
+                    {driveBreadcrumb.map((p, i) => (
+                      <span key={p.id} className="flex items-center gap-1">
+                        <span>/</span>
+                        <button
+                          onClick={() => voltarPastaDrive(i)}
+                          className={`hover:text-primary-800 ${i === driveBreadcrumb.length - 1 ? 'font-semibold text-primary-800' : ''}`}
+                        >
+                          {p.nome}
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+
+                  {driveLoading ? (
+                    <div className="flex justify-center py-4">
+                      <Loader2 className="w-4 h-4 text-primary-800 animate-spin" />
+                    </div>
+                  ) : driveErro ? (
+                    <p className="text-xs text-red-600">{driveErro}</p>
+                  ) : driveItens.length === 0 ? (
+                    <p className="text-xs text-slate-400">Pasta vazia.</p>
+                  ) : (
+                    <ul className="space-y-1">
+                      {driveItens.map((item) => (
+                        <li key={item.id}>
+                          {item.tipo === 'pasta' ? (
+                            <button
+                              onClick={() => abrirPastaDrive({ id: item.id, nome: item.nome })}
+                              className="flex items-center gap-1.5 text-sm text-slate-700 hover:text-primary-800 w-full text-left"
+                            >
+                              <Folder className="w-3.5 h-3.5 text-primary-800 flex-shrink-0" />
+                              {item.nome}
+                            </button>
+                          ) : (
+                            <a
+                              href={item.link || '#'}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex items-center gap-1.5 text-sm text-slate-600 hover:text-primary-800"
+                            >
+                              <FileText className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                              <span className="truncate">{item.nome}</span>
+                              <ExternalLink className="w-3 h-3 text-slate-300 flex-shrink-0" />
+                            </a>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
 
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
                 {carregandoThread ? (

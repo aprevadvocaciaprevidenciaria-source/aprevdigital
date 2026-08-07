@@ -13,11 +13,15 @@ import {
   ClipboardList,
   FolderOpen,
   ExternalLink,
+  ClipboardCheck,
+  Copy,
+  Check,
 } from 'lucide-react'
 import Layout from '../../components/Layout'
 import { supabase } from '../../lib/supabase'
 import { formatCurrency, formatDate } from '../../lib/format'
 import { STATUS_META, statusMeta } from '../../lib/status'
+import { TIPO_BENEFICIO_OPTIONS, tipoBeneficioLabel } from '../../lib/documentos'
 
 function buildConviteWhatsappUrl(cliente, email) {
   const contato = cliente.contato_nome || cliente.nome || 'tudo bem'
@@ -40,6 +44,7 @@ function buildConviteWhatsappUrl(cliente, email) {
 const TABS = [
   { value: 'geral', label: 'Visão geral', icon: Building2 },
   { value: 'tarefas', label: 'Tarefas', icon: ClipboardList },
+  { value: 'documentos', label: 'Documentos', icon: ClipboardCheck },
 ]
 
 const FIELD_LABELS = {
@@ -77,6 +82,11 @@ export default function ClienteDetalhe() {
   const [enviandoConvite, setEnviandoConvite] = useState(false)
   const [conviteMsg, setConviteMsg] = useState('')
   const [savingDrive, setSavingDrive] = useState(false)
+  const [documentosCliente, setDocumentosCliente] = useState([])
+  const [tipoBeneficioChecklist, setTipoBeneficioChecklist] = useState(TIPO_BENEFICIO_OPTIONS[0].value)
+  const [gerandoChecklist, setGerandoChecklist] = useState(false)
+  const [erroChecklist, setErroChecklist] = useState('')
+  const [copiadoMensagem, setCopiadoMensagem] = useState(false)
 
   useEffect(() => {
     async function init() {
@@ -98,16 +108,66 @@ export default function ClienteDetalhe() {
       { data: cliente },
       { data: tarefasData },
       { data: acessoData },
+      { data: documentosData },
     ] = await Promise.all([
       supabase.from('clientes').select('*').eq('id', id).single(),
       supabase.from('tarefas').select('*').eq('cliente_id', id).order('created_at', { ascending: false }),
       supabase.from('users').select('id, email').eq('cliente_id', id).eq('tipo', 'cliente').maybeSingle(),
+      supabase.from('documentos_cliente').select('*').eq('cliente_id', id).order('created_at'),
     ])
 
     setForm(cliente)
     setTarefas(tarefasData || [])
     setClienteAcesso(acessoData || null)
+    setDocumentosCliente(documentosData || [])
+    if (cliente?.nicho) {
+      const match = TIPO_BENEFICIO_OPTIONS.find((t) => t.label === cliente.nicho || t.value === cliente.nicho)
+      if (match) setTipoBeneficioChecklist(match.value)
+    }
     setLoading(false)
+  }
+
+  async function handleGerarChecklist() {
+    setGerandoChecklist(true)
+    setErroChecklist('')
+    const { data: sessionData } = await supabase.auth.getSession()
+    const token = sessionData?.session?.access_token
+    const res = await fetch('/api/documentos/gerar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ clienteId: id, tipoBeneficio: tipoBeneficioChecklist }),
+    })
+    const json = await res.json().catch(() => ({}))
+    setGerandoChecklist(false)
+    if (!res.ok) {
+      setErroChecklist(json.error || 'Não foi possível gerar a checklist.')
+      return
+    }
+    setDocumentosCliente(json.itens || [])
+  }
+
+  async function toggleDocumentoRecebido(item) {
+    const novoStatus = item.status === 'recebido' ? 'pendente' : 'recebido'
+    const { data } = await supabase
+      .from('documentos_cliente')
+      .update({ status: novoStatus, recebido_em: novoStatus === 'recebido' ? new Date().toISOString() : null })
+      .eq('id', item.id)
+      .select()
+      .single()
+    if (data) setDocumentosCliente((prev) => prev.map((d) => (d.id === item.id ? data : d)))
+  }
+
+  async function handleCopiarMensagemDocumentos() {
+    const pendentes = documentosCliente.filter((d) => d.status === 'pendente')
+    if (pendentes.length === 0) return
+    const contato = form.contato_nome || form.nome || ''
+    const mensagem =
+      `Oi${contato ? ` ${contato}` : ''}! Pra continuarmos com o seu processo, ainda precisamos que você nos envie:\n\n` +
+      pendentes.map((d) => `📄 ${d.nome_documento}`).join('\n') +
+      `\n\nPode mandar por aqui mesmo, no WhatsApp. Qualquer dúvida, é só chamar!`
+    await navigator.clipboard.writeText(mensagem)
+    setCopiadoMensagem(true)
+    setTimeout(() => setCopiadoMensagem(false), 2000)
   }
 
   async function handleSaveDrivePasta(e) {
@@ -261,6 +321,9 @@ export default function ClienteDetalhe() {
               {tab.label}
               {tab.value === 'tarefas' && tarefas.filter((t) => t.status !== 'concluida').length > 0 && (
                 <span className="badge bg-amber-100 text-amber-700 py-0">{tarefas.filter((t) => t.status !== 'concluida').length}</span>
+              )}
+              {tab.value === 'documentos' && documentosCliente.filter((d) => d.status === 'pendente').length > 0 && (
+                <span className="badge bg-amber-100 text-amber-700 py-0">{documentosCliente.filter((d) => d.status === 'pendente').length}</span>
               )}
             </button>
           )
@@ -514,6 +577,86 @@ export default function ClienteDetalhe() {
                 )
               })}
             </ul>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'documentos' && (
+        <div className="space-y-6">
+          {documentosCliente.length === 0 ? (
+            <div className="card space-y-3">
+              <h2 className="font-display font-semibold text-night">Gerar checklist de documentos</h2>
+              <p className="text-sm text-slate-500">
+                Escolhe o tipo de benefício desse caso pra gerar a lista de documentos a pedir - baseada no modelo
+                cadastrado em Checklist de Documentos.
+              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <select
+                  value={tipoBeneficioChecklist}
+                  onChange={(e) => setTipoBeneficioChecklist(e.target.value)}
+                  className="input-field flex-1 min-w-[220px]"
+                >
+                  {TIPO_BENEFICIO_OPTIONS.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={handleGerarChecklist}
+                  disabled={gerandoChecklist}
+                  className="btn-primary flex items-center gap-2 text-sm"
+                >
+                  {gerandoChecklist && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Gerar checklist
+                </button>
+              </div>
+              {erroChecklist && <p className="text-sm text-red-600">{erroChecklist}</p>}
+            </div>
+          ) : (
+            <div className="card space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                  <h2 className="font-display font-semibold text-night">Documentos do caso</h2>
+                  <p className="text-xs text-slate-400">
+                    {tipoBeneficioLabel(tipoBeneficioChecklist)} · {documentosCliente.filter((d) => d.status === 'recebido').length}/{documentosCliente.length} recebidos
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleGerarChecklist}
+                    disabled={gerandoChecklist}
+                    className="btn-secondary flex items-center gap-2 text-sm"
+                    title="Adiciona itens novos do modelo, sem mexer no que já foi marcado"
+                  >
+                    {gerandoChecklist && <Loader2 className="w-4 h-4 animate-spin" />}
+                    Atualizar do modelo
+                  </button>
+                  <button
+                    onClick={handleCopiarMensagemDocumentos}
+                    disabled={documentosCliente.every((d) => d.status !== 'pendente')}
+                    className="btn-primary flex items-center gap-2 text-sm"
+                  >
+                    {copiadoMensagem ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    {copiadoMensagem ? 'Copiado!' : 'Copiar mensagem dos pendentes'}
+                  </button>
+                </div>
+              </div>
+              {erroChecklist && <p className="text-sm text-red-600">{erroChecklist}</p>}
+              <ul className="divide-y divide-slate-100">
+                {documentosCliente.map((doc) => (
+                  <li key={doc.id} className="py-2.5 flex items-center gap-3">
+                    <button onClick={() => toggleDocumentoRecebido(doc)}>
+                      <CheckSquare className={`w-4 h-4 ${doc.status === 'recebido' ? 'text-primary-800' : 'text-slate-300'}`} />
+                    </button>
+                    <span className={`text-sm flex-1 ${doc.status === 'recebido' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+                      {doc.nome_documento}
+                    </span>
+                    {doc.status === 'recebido' && doc.recebido_em && (
+                      <span className="text-xs text-slate-400">{formatDate(doc.recebido_em.slice(0, 10))}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </div>
       )}
