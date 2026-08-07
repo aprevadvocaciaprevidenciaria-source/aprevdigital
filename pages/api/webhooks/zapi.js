@@ -99,9 +99,12 @@ export default async function handler(req, res) {
     // telefone - cliente tem prioridade (se virou cliente, o lead antigo já
     // cumpriu seu papel). Isso é o que alimenta o filtro Leads/Clientes na
     // tela de Conversas.
+    // Nota: casa com leads_manuais (CRM interno), não com a tabela leads
+    // real sincronizada do Trello - essa tem id bigint (conversas_whatsapp.
+    // lead_id é uuid, tipos incompatíveis) e nenhum user_id. Ver PROGRESSO.md.
     const [{ data: clienteMatch }, { data: leadMatch }] = await Promise.all([
       supabaseAdmin.from('clientes').select('id').eq('user_id', dono.id).eq('contato_whatsapp', telefone).maybeSingle(),
-      supabaseAdmin.from('leads').select('id').eq('user_id', dono.id).eq('telefone', telefone).maybeSingle(),
+      supabaseAdmin.from('leads_manuais').select('id').eq('user_id', dono.id).eq('telefone', telefone).maybeSingle(),
     ])
 
     const { data: novaConversa, error: erroConversa } = await supabaseAdmin

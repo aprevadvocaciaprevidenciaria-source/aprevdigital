@@ -40,22 +40,22 @@ end;
 $$;
 
 -- ============================================================
--- leads: select/insert/update liberado pra equipe toda. Delete continua
--- só pode_administrar() (dono ou sócio).
+-- leads_manuais: select/insert/update liberado pra equipe toda. Delete
+-- continua só pode_administrar() (dono ou sócio).
 -- ============================================================
-drop policy if exists "Usuarios podem ver seus leads" on leads;
+drop policy if exists "Usuarios podem ver seus leads" on leads_manuais;
 create policy "Usuarios podem ver seus leads"
-  on leads for select
+  on leads_manuais for select
   using (public.sou_equipe_de(user_id));
 
-drop policy if exists "Usuarios podem criar leads" on leads;
+drop policy if exists "Usuarios podem criar leads" on leads_manuais;
 create policy "Usuarios podem criar leads"
-  on leads for insert
+  on leads_manuais for insert
   with check (public.sou_equipe_de(user_id));
 
-drop policy if exists "Usuarios podem atualizar seus leads" on leads;
+drop policy if exists "Usuarios podem atualizar seus leads" on leads_manuais;
 create policy "Usuarios podem atualizar seus leads"
-  on leads for update
+  on leads_manuais for update
   using (public.sou_equipe_de(user_id));
 
 -- delete: mantém pode_administrar() (política já existente, não mexida aqui)

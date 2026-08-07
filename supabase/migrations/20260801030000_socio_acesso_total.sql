@@ -54,7 +54,7 @@ declare
   t text;
 begin
   foreach t in array array[
-    'clientes', 'tarefas', 'colaboradores', 'leads', 'avaliacoes',
+    'clientes', 'tarefas', 'colaboradores', 'leads_manuais', 'avaliacoes',
     'rankings_local', 'fotos_clientes', 'relatorios', 'mensagens_fila',
     'automacao_config'
   ]
@@ -302,24 +302,24 @@ create policy "Usuários podem excluir suas mensagens"
   using (public.pode_administrar(user_id));
 
 -- ============================================================
--- leads
+-- leads_manuais
 -- ============================================================
-drop policy if exists "Usuarios podem ver seus leads" on leads;
+drop policy if exists "Usuarios podem ver seus leads" on leads_manuais;
 create policy "Usuarios podem ver seus leads"
-  on leads for select
+  on leads_manuais for select
   using (public.pode_administrar(user_id));
 
-drop policy if exists "Usuarios podem criar leads" on leads;
+drop policy if exists "Usuarios podem criar leads" on leads_manuais;
 create policy "Usuarios podem criar leads"
-  on leads for insert
+  on leads_manuais for insert
   with check (public.pode_administrar(user_id));
 
-drop policy if exists "Usuarios podem atualizar seus leads" on leads;
+drop policy if exists "Usuarios podem atualizar seus leads" on leads_manuais;
 create policy "Usuarios podem atualizar seus leads"
-  on leads for update
+  on leads_manuais for update
   using (public.pode_administrar(user_id));
 
-drop policy if exists "Usuarios podem excluir seus leads" on leads;
+drop policy if exists "Usuarios podem excluir seus leads" on leads_manuais;
 create policy "Usuarios podem excluir seus leads"
-  on leads for delete
+  on leads_manuais for delete
   using (public.pode_administrar(user_id));

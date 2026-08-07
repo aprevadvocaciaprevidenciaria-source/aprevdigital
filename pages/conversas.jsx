@@ -361,7 +361,7 @@ export default function Conversas() {
       let leadId = conversaSelecionada.lead_id
       if (!leadId) {
         const { data } = await supabase
-          .from('leads')
+          .from('leads_manuais')
           .insert({ user_id: contexto.donoUserId, nome, telefone: conversaSelecionada.telefone, origem: 'painel', status: 'novo' })
           .select('id')
           .single()

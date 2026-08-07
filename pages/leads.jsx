@@ -48,7 +48,7 @@ export default function Leads() {
   }, [router])
 
   async function carregarLeads() {
-    const { data } = await supabase.from('leads').select('*').order('created_at', { ascending: false })
+    const { data } = await supabase.from('leads_manuais').select('*').order('created_at', { ascending: false })
     setLeads(data || [])
   }
 
@@ -57,7 +57,7 @@ export default function Leads() {
     if (!novoLead.nome.trim()) return
     setSalvando(true)
     const { data, error } = await supabase
-      .from('leads')
+      .from('leads_manuais')
       .insert([{ ...novoLead, user_id: userId, origem: 'manual' }])
       .select()
       .single()
@@ -70,7 +70,7 @@ export default function Leads() {
   }
 
   async function atualizarStatus(lead, status) {
-    await supabase.from('leads').update({ status }).eq('id', lead.id)
+    await supabase.from('leads_manuais').update({ status }).eq('id', lead.id)
     setLeads(leads.map((l) => (l.id === lead.id ? { ...l, status } : l)))
   }
 
@@ -93,7 +93,7 @@ export default function Leads() {
       .single()
 
     if (!error) {
-      await supabase.from('leads').update({ status: 'convertido', cliente_id: cliente.id }).eq('id', lead.id)
+      await supabase.from('leads_manuais').update({ status: 'convertido', cliente_id: cliente.id }).eq('id', lead.id)
       setLeads(leads.map((l) => (l.id === lead.id ? { ...l, status: 'convertido', cliente_id: cliente.id } : l)))
       router.push(`/clientes/${cliente.id}`)
       return

@@ -212,7 +212,7 @@ export default async function handler(req, res) {
       const limite = Date.now() - diasFollowup * 24 * 60 * 60 * 1000
 
       const { data: leadsAtivos } = await supabaseAdmin
-        .from('leads')
+        .from('leads_manuais')
         .select('*')
         .eq('user_id', config.user_id)
         .in('status', ['novo', 'contatado'])
@@ -241,7 +241,7 @@ export default async function handler(req, res) {
             agendado_para: dataStr,
           },
         ])
-        await supabaseAdmin.from('leads').update({ ultimo_followup_em: new Date().toISOString() }).eq('id', lead.id)
+        await supabaseAdmin.from('leads_manuais').update({ ultimo_followup_em: new Date().toISOString() }).eq('id', lead.id)
         resumo.leads_followup_gerados += 1
       }
     }

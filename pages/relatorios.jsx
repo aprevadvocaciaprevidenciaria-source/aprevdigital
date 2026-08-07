@@ -62,7 +62,7 @@ export default function Relatorios() {
         .neq('status', 'concluida')
         .lt('vencimento', hoje)
         .order('vencimento', { ascending: true }),
-      supabase.from('leads').select('id, status'),
+      supabase.from('leads_manuais').select('id, status'),
       supabase
         .from('conversas_whatsapp')
         .select('id, nome_contato, telefone, status, ultima_mensagem_em, colaborador_id, colaboradores(nome)')

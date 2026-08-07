@@ -38,7 +38,7 @@ $$;
 create table if not exists conversas_whatsapp (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references users (id) on delete cascade,
-  lead_id uuid references leads (id) on delete set null,
+  lead_id uuid references leads_manuais (id) on delete set null,
   cliente_id uuid references clientes (id) on delete set null,
   telefone text not null,
   nome_contato text,

@@ -12,20 +12,37 @@ de um template de agência de marketing local (GBP) que foi adaptado pro escrit�
 
 Projeto Supabase: **Aprev Digital** (`fnrzdbcjcypacpukpaqh`).
 
-## 🚨 BLOQUEADOR ATUAL: banco de produção sem o schema do CRM
+## ✅ RESOLVIDO em 2026-08-07: schema do CRM aplicado em produção
 
-Confirmado em 2026-08-07: o banco Supabase de produção só tem as 6 tabelas do painel antigo
-de Trello (`leads`, `leads_parados`, `funil_snapshot`, `funil_historico`, `whatsapp_metrics`,
-`marketing_metrics`). **Nenhuma tabela do CRM existe ainda** — sem `users`, `colaboradores`,
-`clientes`, `tarefas`, `conversas_whatsapp`, `mensagens_conversa`, `base_conhecimento_ia`,
-`documentos_checklist`, etc. O código do painel foi implantado com sucesso na Vercel (o
-deploy funciona), mas praticamente toda funcionalidade real (login de colaborador, Casos,
-Tarefas, Conversas, Base de Conhecimento, Documentos) vai falhar em runtime porque as tabelas
-que ela consulta não existem. Isso inclui provavelmente o próprio fluxo de login.
+Todas as 29 migrations do repositório (`supabase/migrations/`) foram aplicadas no banco de
+produção via Supabase MCP. As 34 tabelas do CRM agora existem (`users`, `colaboradores`,
+`clientes`, `tarefas`, `conversas_whatsapp`, `base_conhecimento_ia`, `documentos_checklist`,
+etc.), junto com as 6 tabelas antigas do painel de Trello, que continuam intocadas.
 
-**Antes de aplicar as migrations que faltam**, resolver a pendência de nomenclatura da tabela
-`leads` abaixo, senão a migration do CRM (`20260801000000_leads.sql`) vira no-op silencioso
-igual já é hoje.
+Como parte disso, a tabela `leads` do CRM (que colidia de nome com a `leads` real do Trello)
+foi **renomeada pra `leads_manuais`** - no banco e em todo o código (`pages/leads.jsx`,
+`pages/conversas.jsx`, `pages/relatorios.jsx`, `pages/api/webhooks/zapi.js`,
+`pages/api/leads/capturar.js`, `pages/api/cron/diario.js`, e as migrations que a referenciam).
+`pages/leads-parados.jsx` e a RLS de `leads_trello_rls.sql` continuam apontando pra tabela real
+do Trello, sem mudança.
+
+**Limitação conhecida, não resolvida**: `conversas_whatsapp.lead_id` é `uuid` e referencia
+`leads_manuais` (também uuid). A tabela `leads` real do Trello tem `id` `bigint` - os dois
+nunca poderão se conectar por FK sem uma coluna nova. Por isso o auto-match de conversa por
+telefone em `zapi.js` casa só com `leads_manuais` (hoje vazia/pouco usada), não com o funil
+real do Trello. Ver comentário no próprio arquivo.
+
+## 🚨 BLOQUEADOR ATUAL: nenhuma conta de usuário existe
+
+Confirmado em 2026-08-07: `auth.users` está com **0 registros** - ninguém nunca criou login
+nesse projeto Supabase. O painel não tem tela de "criar conta" (só login) - o desenho é o
+dono ser cadastrado direto e depois convidar as secretárias por dentro do painel.
+
+**Próximo passo obrigatório**: criar a primeira conta manualmente em
+https://supabase.com/dashboard/project/fnrzdbcjcypacpukpaqh/auth/users → "Add user" →
+"Create new user", com "Auto Confirm User" marcado. Isso dispara o gatilho `handle_new_user()`
+(já ativo) que cria o perfil em `public.users` automaticamente. Depois disso, login normal em
+`/login` já dá acesso total (dono/sócio).
 
 ## ⚠️ Pendência arquitetural importante (ainda não resolvida)
 
