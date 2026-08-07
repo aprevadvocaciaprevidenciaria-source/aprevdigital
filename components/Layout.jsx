@@ -21,6 +21,7 @@ import {
   BookOpen,
   Sparkles,
   ClipboardCheck,
+  AlertTriangle,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import Logo from './Logo'
@@ -32,6 +33,7 @@ import Logo from './Logo'
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/leads', label: 'Funil de Leads', icon: Target, roles: ['secretaria'] },
+  { href: '/leads-parados', label: 'Leads Parados', icon: AlertTriangle, roles: ['secretaria'] },
   { href: '/conversas', label: 'Conversas WhatsApp', icon: MessageCircle, roles: ['secretaria'] },
   { href: '/clientes', label: 'Casos', icon: Users, roles: ['secretaria'] },
   { href: '/tarefas', label: 'Tarefas', icon: CheckSquare, roles: ['secretaria'] },
