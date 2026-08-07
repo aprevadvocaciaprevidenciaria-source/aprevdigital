@@ -8,9 +8,20 @@ import {
   CheckSquare,
   Clock,
   GripVertical,
+  BarChart3,
 } from 'lucide-react'
 import Layout from '../components/Layout'
 import { supabase } from '../lib/supabase'
+import { resolveEquipeContext } from '../lib/session'
+
+function inicioDoMes() {
+  const hoje = new Date()
+  return new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().slice(0, 10)
+}
+
+function hojeISO() {
+  return new Date().toISOString().slice(0, 10)
+}
 
 const COLUNAS = [
   { value: 'a-fazer', label: 'A Fazer' },
@@ -45,6 +56,10 @@ export default function Tarefas() {
   const [colaboradores, setColaboradores] = useState([])
   const [clienteFilter, setClienteFilter] = useState('todos')
   const [prioridadeFilter, setPrioridadeFilter] = useState('todas')
+  const [colaboradorFilter, setColaboradorFilter] = useState('todos')
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [rankingDe, setRankingDe] = useState(inicioDoMes())
+  const [rankingAte, setRankingAte] = useState(hojeISO())
   const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
@@ -59,7 +74,20 @@ export default function Tarefas() {
         router.replace('/login')
         return
       }
-      setUserId(sessionData.session.user.id)
+      const ctx = await resolveEquipeContext()
+      setUserId(ctx.donoUserId)
+
+      let admin = !ctx.colaboradorId
+      if (ctx.colaboradorId) {
+        const { data: colaborador } = await supabase
+          .from('colaboradores')
+          .select('papel')
+          .eq('id', ctx.colaboradorId)
+          .maybeSingle()
+        admin = colaborador?.papel === 'socio'
+      }
+      setIsAdmin(admin)
+
       await loadData()
       setLoading(false)
     }
@@ -132,8 +160,12 @@ export default function Tarefas() {
   async function moveTarefa(taskId, novoStatus) {
     const tarefa = tarefas.find((t) => t.id === taskId)
     if (!tarefa || tarefa.status === novoStatus) return
-    setTarefas(tarefas.map((t) => (t.id === taskId ? { ...t, status: novoStatus } : t)))
-    await supabase.from('tarefas').update({ status: novoStatus }).eq('id', taskId)
+    // concluida_em só fica preenchido enquanto a tarefa está na coluna
+    // Concluído - se ela voltar pra outra coluna, limpa de novo (senão
+    // o ranking contaria uma tarefa reaberta como concluída pra sempre).
+    const concluidaEm = novoStatus === 'concluida' ? new Date().toISOString() : null
+    setTarefas(tarefas.map((t) => (t.id === taskId ? { ...t, status: novoStatus, concluida_em: concluidaEm } : t)))
+    await supabase.from('tarefas').update({ status: novoStatus, concluida_em: concluidaEm }).eq('id', taskId)
   }
 
   function addSubtarefaItem() {
@@ -161,10 +193,28 @@ export default function Tarefas() {
       tarefas.filter(
         (t) =>
           (clienteFilter === 'todos' || t.cliente_id === clienteFilter) &&
-          (prioridadeFilter === 'todas' || t.prioridade === prioridadeFilter)
+          (prioridadeFilter === 'todas' || t.prioridade === prioridadeFilter) &&
+          (colaboradorFilter === 'todos' || t.colaborador_id === colaboradorFilter)
       ),
-    [tarefas, clienteFilter, prioridadeFilter]
+    [tarefas, clienteFilter, prioridadeFilter, colaboradorFilter]
   )
+
+  // Ranking interno de tarefas concluídas por colaborador, num período - só
+  // calculado (e só renderizado) pra sócio; não é uma rota nem consulta
+  // separada, as secretárias nunca disparam essa query porque isAdmin é
+  // falso pra elas.
+  const ranking = useMemo(() => {
+    if (!isAdmin) return []
+    const contagem = new Map()
+    tarefas.forEach((t) => {
+      if (t.status !== 'concluida' || !t.concluida_em) return
+      const dia = t.concluida_em.slice(0, 10)
+      if (dia < rankingDe || dia > rankingAte) return
+      const nome = t.colaboradores?.nome || 'Sem responsável'
+      contagem.set(nome, (contagem.get(nome) || 0) + 1)
+    })
+    return Array.from(contagem.entries()).sort((a, b) => b[1] - a[1])
+  }, [tarefas, isAdmin, rankingDe, rankingAte])
 
   const hoje = new Date().toISOString().slice(0, 10)
 
@@ -194,12 +244,61 @@ export default function Tarefas() {
               <option key={p} value={p}>{p}</option>
             ))}
           </select>
+          <select value={colaboradorFilter} onChange={(e) => setColaboradorFilter(e.target.value)} className="input-field sm:max-w-[200px]">
+            <option value="todos">Todos os responsáveis</option>
+            {colaboradores.map((c) => (
+              <option key={c.id} value={c.id}>{c.nome}</option>
+            ))}
+          </select>
         </div>
         <button onClick={openCreateModal} className="btn-primary flex items-center gap-2 justify-center">
           <Plus className="w-4 h-4" />
           Nova Tarefa
         </button>
       </div>
+
+      {isAdmin && (
+        <div className="card mb-6">
+          <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-primary-800" />
+              <h3 className="font-display font-semibold text-night text-sm">
+                Ranking de tarefas concluídas <span className="text-slate-400 font-normal">(uso interno, secretárias não veem)</span>
+              </h3>
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+              <input
+                type="date"
+                value={rankingDe}
+                onChange={(e) => setRankingDe(e.target.value)}
+                className="input-field py-1.5 text-xs w-auto"
+              />
+              <span className="text-slate-400">até</span>
+              <input
+                type="date"
+                value={rankingAte}
+                onChange={(e) => setRankingAte(e.target.value)}
+                className="input-field py-1.5 text-xs w-auto"
+              />
+            </div>
+          </div>
+          {ranking.length === 0 ? (
+            <p className="text-sm text-slate-400">Nenhuma tarefa concluída com data registrada nesse período.</p>
+          ) : (
+            <ul className="space-y-1.5">
+              {ranking.map(([nome, total], i) => (
+                <li key={nome} className="flex items-center justify-between text-sm">
+                  <span className="text-slate-700">{i + 1}. {nome}</span>
+                  <span className="badge bg-primary-50 text-primary-800">{total} concluída{total === 1 ? '' : 's'}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="text-[11px] text-slate-400 mt-2">
+            Só conta a partir de agora - tarefas já concluídas antes dessa atualização não têm data de conclusão registrada.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {COLUNAS.map((coluna) => {

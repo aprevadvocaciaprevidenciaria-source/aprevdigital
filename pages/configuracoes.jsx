@@ -45,6 +45,7 @@ export default function Configuracoes() {
   const [novoColaborador, setNovoColaborador] = useState({ nome: '', email: '', papel: 'colaborador' })
   const [savingColaborador, setSavingColaborador] = useState(false)
   const [convidandoId, setConvidandoId] = useState(null)
+  const [senhasManuais, setSenhasManuais] = useState({})
 
   const [pageSize, setPageSize] = useState(10)
 
@@ -181,11 +182,16 @@ export default function Configuracoes() {
       showFeedback('Adicione um e-mail pra esse colaborador antes de liberar o acesso.')
       return
     }
+    const senha = (senhasManuais[colaborador.id] || '').trim()
+    if (senha && senha.length < 6) {
+      showFeedback('A senha deve ter pelo menos 6 caracteres.')
+      return
+    }
     setConvidandoId(colaborador.id)
     const res = await fetch('/api/colaboradores/convidar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify({ colaboradorId: colaborador.id, email: colaborador.email }),
+      body: JSON.stringify({ colaboradorId: colaborador.id, email: colaborador.email, senha: senha || undefined }),
     })
     const json = await res.json().catch(() => ({}))
     setConvidandoId(null)
@@ -193,7 +199,18 @@ export default function Configuracoes() {
       showFeedback(json.error || 'Erro ao dar acesso.')
       return
     }
-    showFeedback(json.novoUsuario ? 'Convite enviado por e-mail!' : 'Acesso liberado com sucesso.')
+    if (json.modo === 'senha_manual') {
+      showFeedback(`Conta criada com a senha definida. Repasse pra ${json.colaborador}: e-mail ${colaborador.email} + a senha que você digitou.`)
+    } else if (json.modo === 'convite') {
+      showFeedback('Convite enviado por e-mail!')
+    } else {
+      showFeedback('Acesso liberado com sucesso.')
+    }
+    setSenhasManuais((prev) => {
+      const copia = { ...prev }
+      delete copia[colaborador.id]
+      return copia
+    })
     const { data } = await supabase.from('colaboradores').select('*').order('created_at', { ascending: false })
     setColaboradores(data || [])
   }
@@ -403,14 +420,24 @@ export default function Configuracoes() {
                     {c.login_user_id ? (
                       <span className="badge bg-secondary-50 text-secondary-700">Acesso ativo</span>
                     ) : (
-                      <button
-                        onClick={() => handleConvidarColaborador(c)}
-                        disabled={convidandoId === c.id}
-                        className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 py-1.5"
-                      >
-                        {convidandoId === c.id && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                        Dar acesso
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          value={senhasManuais[c.id] || ''}
+                          onChange={(e) => setSenhasManuais((prev) => ({ ...prev, [c.id]: e.target.value }))}
+                          placeholder="Senha (opcional)"
+                          title="Deixe em branco pra mandar convite por e-mail. Preencha pra criar a conta já com essa senha, sem enviar e-mail - você repassa por fora."
+                          className="input-field text-xs w-32 py-1.5"
+                        />
+                        <button
+                          onClick={() => handleConvidarColaborador(c)}
+                          disabled={convidandoId === c.id}
+                          className="btn-secondary flex items-center gap-1.5 text-xs px-2.5 py-1.5 whitespace-nowrap"
+                        >
+                          {convidandoId === c.id && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                          {senhasManuais[c.id]?.trim() ? 'Criar com senha' : 'Dar acesso'}
+                        </button>
+                      </div>
                     )}
                     <button onClick={() => handleDeleteColaborador(c.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
                       <Trash2 className="w-4 h-4" />
