@@ -4,6 +4,13 @@ import { createClient } from '@supabase/supabase-js'
 // registro dele em `colaboradores`. Só quem já é dono do colaborador (via
 // RLS, checado com o próprio token do usuário logado) pode chamar isso - a
 // service role só é usada depois de confirmada a posse.
+//
+// Duas formas de dar acesso a um colaborador novo:
+// - sem `senha`: manda convite por e-mail (Supabase Auth) - sujeito ao limite
+//   de envio de e-mail do projeto (plano padrão manda pouquíssimos por hora).
+// - com `senha`: cria a conta já ativa com essa senha, sem mandar e-mail
+//   nenhum - o dono compartilha a senha por fora (WhatsApp, etc.). Único
+//   jeito de contornar o limite de e-mail sem precisar de SMTP próprio.
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método não permitido.' })
@@ -14,9 +21,12 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Não autenticado.' })
   }
 
-  const { colaboradorId, email } = req.body || {}
+  const { colaboradorId, email, senha } = req.body || {}
   if (!colaboradorId || !email) {
     return res.status(400).json({ error: 'colaboradorId e email são obrigatórios.' })
+  }
+  if (senha && senha.length < 6) {
+    return res.status(400).json({ error: 'A senha deve ter pelo menos 6 caracteres.' })
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -53,8 +63,20 @@ export default async function handler(req, res) {
     .maybeSingle()
 
   let targetUserId = existingUser?.id
+  let modo = 'existente'
 
-  if (!targetUserId) {
+  if (!targetUserId && senha) {
+    const { data: criado, error: createError } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password: senha,
+      email_confirm: true,
+    })
+    if (createError) {
+      return res.status(400).json({ error: createError.message })
+    }
+    targetUserId = criado.user.id
+    modo = 'senha_manual'
+  } else if (!targetUserId) {
     const origin = req.headers.origin || `https://${req.headers.host}`
     const { data: invited, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       redirectTo: `${origin}/redefinir-senha`,
@@ -63,6 +85,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: inviteError.message })
     }
     targetUserId = invited.user.id
+    modo = 'convite'
   }
 
   const { error: linkUserError } = await supabaseAdmin
@@ -81,5 +104,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: linkColaboradorError.message })
   }
 
-  return res.status(200).json({ ok: true, novoUsuario: !existingUser, colaborador: colaborador.nome })
+  return res.status(200).json({ ok: true, novoUsuario: !existingUser, modo, colaborador: colaborador.nome })
 }

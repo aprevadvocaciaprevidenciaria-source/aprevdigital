@@ -20,6 +20,8 @@ import {
   MessageCircle,
   BookOpen,
   Sparkles,
+  ClipboardCheck,
+  AlertTriangle,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import Logo from './Logo'
@@ -31,6 +33,7 @@ import Logo from './Logo'
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/leads', label: 'Funil de Leads', icon: Target, roles: ['secretaria'] },
+  { href: '/leads-parados', label: 'Leads Parados', icon: AlertTriangle, roles: ['secretaria'] },
   { href: '/conversas', label: 'Conversas WhatsApp', icon: MessageCircle, roles: ['secretaria'] },
   { href: '/clientes', label: 'Casos', icon: Users, roles: ['secretaria'] },
   { href: '/tarefas', label: 'Tarefas', icon: CheckSquare, roles: ['secretaria'] },
@@ -38,6 +41,7 @@ const NAV_ITEMS = [
   { href: '/digital', label: 'Central do Digital', icon: Sparkles },
   { href: '/automacoes', label: 'Automações', icon: Zap },
   { href: '/base-conhecimento', label: 'Base de Conhecimento IA', icon: BookOpen, roles: ['secretaria'] },
+  { href: '/documentos', label: 'Checklist de Documentos', icon: ClipboardCheck, roles: ['secretaria'] },
   { href: '/configuracoes', label: 'Configurações', icon: Settings },
 ]
 

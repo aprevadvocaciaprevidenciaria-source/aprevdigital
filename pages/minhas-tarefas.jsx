@@ -75,8 +75,9 @@ export default function MinhasTarefas() {
   }
 
   async function moverTarefa(tarefa, novoStatus) {
-    setTarefas(tarefas.map((t) => (t.id === tarefa.id ? { ...t, status: novoStatus } : t)))
-    await supabase.from('tarefas').update({ status: novoStatus }).eq('id', tarefa.id)
+    const concluidaEm = novoStatus === 'concluida' ? new Date().toISOString() : null
+    setTarefas(tarefas.map((t) => (t.id === tarefa.id ? { ...t, status: novoStatus, concluida_em: concluidaEm } : t)))
+    await supabase.from('tarefas').update({ status: novoStatus, concluida_em: concluidaEm }).eq('id', tarefa.id)
   }
 
   async function atribuirAMim(tarefa) {
