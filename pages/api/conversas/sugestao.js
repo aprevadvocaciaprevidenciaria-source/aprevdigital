@@ -1,11 +1,39 @@
 import { createClient } from '@supabase/supabase-js'
+import { generateText } from 'ai'
+import { anthropic } from '@ai-sdk/anthropic'
 
 // Repassa o JWT do usuário logado pro Supabase pra ler a conversa (RLS via
-// sou_equipe_de garante que só vê o que é da própria equipe). Chama o n8n
-// (workflow "APREV Digital — Sugestão de Resposta") pra gerar o texto com
-// Claude, e grava o resultado em sugestoes_ia com o service_role - essa
-// tabela só aceita insert via service role de propósito (ver migration
+// sou_equipe_de garante que só vê o que é da própria equipe). Gera a
+// sugestão direto com Claude (mesmo modelo usado no resto do painel),
+// restrita ao conteúdo aprovado em base_conhecimento_ia, e grava o
+// resultado em sugestoes_ia com o service_role - essa tabela só aceita
+// insert via service role de propósito (ver migration
 // 20260805000000_crm_whatsapp_ia.sql).
+const SYSTEM_PROMPT = `Você é a assistente de atendimento da APREV Digital, escritório de advocacia previdenciária em Parnaíba-PI.
+
+Sua única função aqui é sugerir, para a secretária revisar e enviar, a próxima mensagem de WhatsApp para o contato - com base exclusivamente nos itens da base de conhecimento aprovada abaixo.
+
+Regras obrigatórias:
+- Baseie a resposta só no que estiver na base de conhecimento. Nunca invente prazo, valor, lei ou informação sobre o caso específico.
+- Nunca dê parecer jurídico: não avalie chance de êxito, valor a receber, estratégia de recurso ou qualquer julgamento sobre o caso. Isso é sempre "Fora do escopo" e deve ser escalado ao Dr.
+- Se a pergunta não estiver coberta pela base de conhecimento, ou for claramente "Fora do escopo", responda de forma breve confirmando o recebimento e avisando que o Dr. vai retornar - não tente responder o mérito.
+- Escreva só o texto pronto pra enviar no WhatsApp: direto, cordial, sem saudação redundante se a conversa já estiver andando, sem assinatura, sem comentário sobre o que você está fazendo.`
+
+function formatarBaseConhecimento(itens) {
+  if (!itens || itens.length === 0) return '(nenhum item cadastrado ainda)'
+  return itens.map((i) => `[${i.categoria}] ${i.topico}\n${i.resposta_aprovada}`).join('\n\n')
+}
+
+function historicoParaMensagens(mensagens) {
+  const convertidas = (mensagens || [])
+    .filter((m) => m.texto)
+    .map((m) => ({ role: m.direcao === 'recebida' ? 'user' : 'assistant', content: m.texto }))
+  if (convertidas.length === 0) {
+    convertidas.push({ role: 'user', content: 'Contato ainda sem mensagens de texto registradas.' })
+  }
+  return convertidas
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método não permitido.' })
@@ -52,28 +80,14 @@ export default async function handler(req, res) {
       .limit(30),
   ])
 
-  const n8nUrl = process.env.N8N_URL
-  const n8nSecret = process.env.N8N_PAINEL_SECRET
-  if (!n8nUrl || !n8nSecret) {
-    return res.status(500).json({ error: 'N8N_URL ou N8N_PAINEL_SECRET não configuradas no servidor.' })
-  }
-
   let sugestaoTexto
   try {
-    const resp = await fetch(`${n8nUrl}/webhook/aprevdigital-sugestao`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-painel-secret': n8nSecret },
-      body: JSON.stringify({
-        nomeContato: conversa.nome_contato,
-        historico: mensagens || [],
-        baseConhecimento: baseConhecimento || [],
-      }),
+    const { text } = await generateText({
+      model: anthropic('claude-sonnet-5'),
+      system: `${SYSTEM_PROMPT}\n\nContato: ${conversa.nome_contato || conversa.telefone}\n\nBase de conhecimento aprovada:\n\n${formatarBaseConhecimento(baseConhecimento)}`,
+      messages: historicoParaMensagens(mensagens),
     })
-    const data = await resp.json()
-    if (!resp.ok || data.error) {
-      throw new Error(data.error || `n8n retornou HTTP ${resp.status}`)
-    }
-    sugestaoTexto = data.sugestao
+    sugestaoTexto = text?.trim()
   } catch (err) {
     return res.status(502).json({ error: `Falha ao gerar sugestão: ${err.message}` })
   }
