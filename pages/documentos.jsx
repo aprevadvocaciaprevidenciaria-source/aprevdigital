@@ -19,6 +19,7 @@ export default function Documentos() {
   const [form, setForm] = useState(EMPTY_ITEM)
   const [salvando, setSalvando] = useState(false)
   const [userId, setUserId] = useState(null)
+  const [erro, setErro] = useState('')
 
   useEffect(() => {
     async function init() {
@@ -66,6 +67,7 @@ export default function Documentos() {
     e.preventDefault()
     if (!form.nome_documento.trim()) return
     setSalvando(true)
+    setErro('')
 
     if (editandoId) {
       const { data, error } = await supabase
@@ -74,14 +76,24 @@ export default function Documentos() {
         .eq('id', editandoId)
         .select()
         .single()
-      if (!error) setItens((prev) => prev.map((i) => (i.id === editandoId ? data : i)))
+      if (error) {
+        setSalvando(false)
+        setErro(error.message)
+        return
+      }
+      setItens((prev) => prev.map((i) => (i.id === editandoId ? data : i)))
     } else {
       const { data, error } = await supabase
         .from('documentos_checklist')
         .insert([{ ...form, user_id: userId }])
         .select()
         .single()
-      if (!error) setItens((prev) => [...prev, data])
+      if (error) {
+        setSalvando(false)
+        setErro(error.message)
+        return
+      }
+      setItens((prev) => [...prev, data])
     }
 
     setSalvando(false)
@@ -92,18 +104,28 @@ export default function Documentos() {
 
   async function excluir(id) {
     if (!confirm('Remover esse documento do modelo? Não mexe no que já foi gerado pra clientes existentes.')) return
-    await supabase.from('documentos_checklist').delete().eq('id', id)
+    setErro('')
+    const { error } = await supabase.from('documentos_checklist').delete().eq('id', id)
+    if (error) {
+      setErro(error.message)
+      return
+    }
     setItens((prev) => prev.filter((i) => i.id !== id))
   }
 
   async function alternarAtivo(item) {
-    const { data } = await supabase
+    setErro('')
+    const { data, error } = await supabase
       .from('documentos_checklist')
       .update({ ativo: !item.ativo })
       .eq('id', item.id)
       .select()
       .single()
-    if (data) setItens((prev) => prev.map((i) => (i.id === item.id ? data : i)))
+    if (error) {
+      setErro(error.message)
+      return
+    }
+    setItens((prev) => prev.map((i) => (i.id === item.id ? data : i)))
   }
 
   const itensFiltrados = itens.filter((i) => filtroTipo === 'todos' || i.tipo_beneficio === filtroTipo)
@@ -120,6 +142,11 @@ export default function Documentos() {
 
   return (
     <Layout title="Checklist de Documentos">
+      {erro && (
+        <div className="card mb-6 bg-red-50 border-red-200 text-sm text-red-700">
+          Não foi possível salvar: {erro}
+        </div>
+      )}
       <div className="card mb-6 bg-primary-50/60 border-primary-100 flex items-start gap-3">
         <ClipboardCheck className="w-5 h-5 text-primary-800 flex-shrink-0 mt-0.5" />
         <p className="text-sm text-slate-600">

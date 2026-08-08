@@ -148,13 +148,17 @@ export default function ClienteDetalhe() {
 
   async function toggleDocumentoRecebido(item) {
     const novoStatus = item.status === 'recebido' ? 'pendente' : 'recebido'
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('documentos_cliente')
       .update({ status: novoStatus, recebido_em: novoStatus === 'recebido' ? new Date().toISOString() : null })
       .eq('id', item.id)
       .select()
       .single()
-    if (data) setDocumentosCliente((prev) => prev.map((d) => (d.id === item.id ? data : d)))
+    if (error) {
+      setErroChecklist(error.message)
+      return
+    }
+    setDocumentosCliente((prev) => prev.map((d) => (d.id === item.id ? data : d)))
   }
 
   async function handleCopiarMensagemDocumentos() {
